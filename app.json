@@ -2,6 +2,7 @@
   "expo": {
     "name": "Comfety",
     "slug": "comfety-app",
+    "scheme": "comfety",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,6 +15,7 @@
       }
     },
     "android": {
+      "package": "com.madg0blin.comfety",
       "adaptiveIcon": {
         "backgroundColor": "#090D16",
         "foregroundImage": "./assets/android-icon-foreground.png",
