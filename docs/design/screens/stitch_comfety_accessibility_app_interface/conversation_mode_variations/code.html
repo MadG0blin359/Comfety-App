@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<meta content="mobile_blank" name="shell-type"/>
+<title>Conversation Mode</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "danger-hazard": "#EF4444",
+            "on-secondary-fixed": "#002114",
+            "tertiary": "#c5cce6",
+            "on-primary-fixed": "#001e2c",
+            "primary-fixed": "#c4e7ff",
+            "outline-variant": "#3e484f",
+            "on-tertiary-fixed-variant": "#3f465b",
+            "secondary-fixed-dim": "#45dfa4",
+            "secondary-fixed": "#34D399",
+            "surface-container-high": "#262a34",
+            "tertiary-fixed": "#dae2fc",
+            "outline": "#87929a",
+            "inverse-primary": "#00668a",
+            "on-error-container": "#ffdad6",
+            "warning-hazard": "#F59E0B",
+            "secondary-container": "#00bd85",
+            "surface-container-lowest": "#090D16",
+            "on-primary": "#00354a",
+            "on-surface-variant": "#bdc8d1",
+            "text-primary": "#F8FAFC",
+            "primary-container": "#38BDF8",
+            "on-error": "#690005",
+            "on-tertiary-fixed": "#131b2e",
+            "on-tertiary": "#283044",
+            "surface-container-low": "#131B2E",
+            "tertiary-container": "#a9b1ca",
+            "surface-interactive": "#1E293B",
+            "inverse-on-surface": "#2c303a",
+            "on-surface": "#dfe2ef",
+            "tertiary-fixed-dim": "#bec6e0",
+            "error-container": "#93000a",
+            "on-secondary-fixed-variant": "#005137",
+            "surface-tint": "#7bd0ff",
+            "secondary": "#34D399",
+            "primary-fixed-dim": "#7bd0ff",
+            "error": "#ffb4ab",
+            "on-tertiary-container": "#3c4459",
+            "on-primary-container": "#004965",
+            "surface-bright": "#353943",
+            "on-primary-fixed-variant": "#004c69",
+            "on-secondary-container": "#00452e",
+            "surface-container": "#131B2E",
+            "surface-container-highest": "#31353f",
+            "inverse-surface": "#dfe2ef",
+            "background": "#090D16",
+            "text-secondary": "#CBD5E1",
+            "on-background": "#dfe2ef",
+            "border-subtle": "#334155",
+            "surface": "#090D16",
+            "primary": "#38BDF8",
+            "surface-variant": "#1E293B",
+            "surface-dim": "#090D16",
+            "on-secondary": "#003825"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          spacing: {
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1.25rem",
+            "space-md": "1rem",
+            "gutter": "1rem",
+            "margin": "1rem",
+            "space-xl": "1.75rem"
+          },
+          fontFamily: {
+            "headline-lg": ["Inter"],
+            "headline-sm": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "body-md": ["Inter"],
+            "body-transcript": ["Inter"],
+            "caption-status": ["Inter"],
+            "label-md": ["Inter"],
+            "label-lg": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-md": ["Inter"]
+          },
+          fontSize: {
+            "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-sm": ["19px", { lineHeight: "26px", fontWeight: "600" }],
+            "headline-lg-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.015em", fontWeight: "700" }],
+            "body-md": ["15px", { lineHeight: "22px", fontWeight: "400" }],
+            "body-transcript": ["22px", { lineHeight: "32px", letterSpacing: "0.01em", fontWeight: "600" }],
+            "caption-status": ["13px", { lineHeight: "18px", letterSpacing: "0.06em", fontWeight: "600" }],
+            "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.04em", fontWeight: "600" }],
+            "label-lg": ["17px", { lineHeight: "24px", fontWeight: "700" }],
+            "body-lg": ["17px", { lineHeight: "26px", fontWeight: "400" }],
+            "headline-md": ["22px", { lineHeight: "30px", letterSpacing: "-0.01em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 0px);
+      }
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen pt-safe pb-safe">
+<main class="flex-1 flex flex-col h-screen max-h-screen overflow-hidden w-full bg-surface">
+<!-- Top Streamlined & Compact Header (Layout change: Voice pill & wave combined below title) -->
+<header class="flex-shrink-0 px-margin pt-space-xs pb-space-xs flex flex-col gap-space-xs bg-surface border-b border-border-subtle/50 z-10">
+<div class="flex items-center justify-between h-12">
+<!-- Back Action Button -->
+<button aria-label="Return to previous screen" class="w-10 h-10 rounded-xl bg-surface-container-low border-[1.5px] border-border-subtle flex items-center justify-center text-text-primary active:bg-surface-interactive focus:outline-none focus:ring-2 focus:ring-primary-container transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<!-- Compact Header Title & Subtitle -->
+<div class="flex flex-col items-center text-center">
+<h1 class="font-headline-sm text-headline-sm text-text-primary tracking-tight leading-tight">Conversation Mode</h1>
+<span class="font-caption-status text-[11px] uppercase tracking-wider text-text-secondary">LIVE SPEECH RELAY</span>
+</div>
+<!-- Placeholder balance to keep title centered -->
+<div class="w-10 h-10"></div>
+</div>
+<!-- Integrated Sleek Status Strip: Voice Pill + Listening Urdu • English Bilingual Waveform -->
+<div class="w-full bg-surface-container-low border-[1.5px] border-border-subtle rounded-xl px-3 py-2 flex items-center justify-between shadow-sm my-0.5">
+<!-- Listening indicator -->
+<div class="flex items-center gap-space-sm">
+<span class="relative flex h-2.5 w-2.5 items-center justify-center">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-fixed opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary-fixed shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+</span>
+<div class="flex items-center gap-1.5">
+<span class="font-label-md text-[13px] text-text-primary font-bold">Listening</span>
+<span class="text-text-secondary text-[12px] font-caption-status">Urdu • English Bilingual</span>
+</div>
+</div>
+<!-- Integrated Right Wing: Waveform + Voice Pill Dropdown -->
+<div class="flex items-center gap-space-sm">
+<div aria-hidden="true" class="flex items-center gap-1 h-4 px-1">
+<span class="w-0.5 bg-secondary-fixed rounded-full animate-pulse h-2"></span>
+<span class="w-0.5 bg-secondary-fixed rounded-full animate-pulse h-3.5"></span>
+<span class="w-0.5 bg-secondary-fixed rounded-full animate-pulse h-2.5"></span>
+<span class="w-0.5 bg-secondary-fixed rounded-full animate-pulse h-4"></span>
+</div>
+<button aria-label="Current voice: Ayesha Warm. Tap to change synthesis voice" class="h-8 px-2.5 rounded-full bg-surface-interactive border border-border-subtle flex items-center gap-1 text-text-primary active:border-primary-container transition-all" type="button">
+<span class="material-symbols-outlined text-primary-container text-[16px]" style="font-variation-settings: 'FILL' 1;">volume_up</span>
+<span class="font-label-md text-[12px] font-semibold text-text-primary">Ayesha</span>
+<span class="material-symbols-outlined text-text-secondary text-[16px]">expand_more</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Center Area: Expanded Vertical Transcript Feed with Alternate Structural Grouping -->
+<section aria-label="Conversation Transcript" class="flex-1 overflow-y-auto px-margin py-space-md flex flex-col gap-space-md" id="transcript-stream">
+<!-- Turn 1: Partner / Counter Card Layout -->
+<article class="w-full flex flex-col items-start">
+<div class="w-full max-w-[92%] bg-surface-container-low border-[1.5px] border-border-subtle rounded-2xl rounded-tl-sm p-4 flex flex-col gap-space-sm shadow-md">
+<!-- Card Header Strip -->
+<div class="flex items-center justify-between w-full border-b border-border-subtle/50 pb-2">
+<div class="flex items-center gap-1.5 text-text-secondary">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span class="font-label-md text-label-md font-semibold text-text-primary">Partner / Counter</span>
+</div>
+<span class="font-caption-status text-caption-status text-text-secondary">10:24 AM</span>
+</div>
+<!-- Body Text -->
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words py-1" dir="auto" lang="ur">
+            السلام علیکم، <span class="inline" dir="ltr" lang="en">how can I help you today?</span>
+</p>
+<!-- Card Base Integrated Action Deck -->
+<div class="pt-2 border-t border-border-subtle/30 flex justify-end">
+<button aria-label="Replay speech aloud" class="h-10 px-4 rounded-xl bg-surface-interactive border border-border-subtle text-text-primary flex items-center gap-1.5 active:bg-surface-container-highest transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-primary-container">volume_up</span>
+<span class="font-label-md text-label-md font-semibold">Replay</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Turn 2: User TTS Broadcast Card Layout (Right Aligned Accent) -->
+<article class="w-full flex flex-col items-end">
+<div class="w-full max-w-[92%] bg-surface-interactive border-2 border-primary-container rounded-2xl rounded-tr-sm p-4 flex flex-col gap-space-sm shadow-[0_0_16px_rgba(56,189,248,0.15)]">
+<!-- Card Header Strip -->
+<div class="flex items-center justify-between w-full border-b border-border-subtle/60 pb-2">
+<span class="font-caption-status text-caption-status text-text-secondary">10:24 AM</span>
+<div class="flex items-center gap-1.5 text-primary-container font-semibold">
+<span class="font-label-md text-label-md">You (Spoken Aloud)</span>
+<span class="material-symbols-outlined text-[18px]">campaign</span>
+</div>
+</div>
+<!-- Body Text -->
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words py-1">
+            I am looking for the pharmacy counter, please.
+          </p>
+<!-- Card Base Footer Strip -->
+<div class="pt-2 border-t border-border-subtle/40 flex items-center justify-between w-full">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest border border-border-subtle">
+<span class="material-symbols-outlined text-[16px] text-secondary-fixed">check_circle</span>
+<span class="font-caption-status text-caption-status text-secondary-fixed">Spoken via TTS</span>
+</div>
+<button aria-label="Play again" class="w-10 h-10 rounded-xl bg-surface-container-low border border-border-subtle flex items-center justify-center text-text-primary active:bg-surface-container transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-primary-container">replay</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Turn 3: Partner / Counter Card Layout -->
+<article class="w-full flex flex-col items-start">
+<div class="w-full max-w-[92%] bg-surface-container-low border-[1.5px] border-border-subtle rounded-2xl rounded-tl-sm p-4 flex flex-col gap-space-sm shadow-md">
+<!-- Card Header Strip -->
+<div class="flex items-center justify-between w-full border-b border-border-subtle/50 pb-2">
+<div class="flex items-center gap-1.5 text-text-secondary">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span class="font-label-md text-label-md font-semibold text-text-primary">Partner / Counter</span>
+</div>
+<span class="font-caption-status text-caption-status text-text-secondary">10:25 AM</span>
+</div>
+<!-- Bilingual Parallel Flow -->
+<div class="flex flex-col gap-1 py-1">
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words">
+              It's straight ahead on the right side.
+            </p>
+<p class="font-body-transcript text-body-transcript text-text-secondary leading-loose break-words" dir="rtl" lang="ur">
+              سیدھے ہاتھ پر سامنے ہے۔
+            </p>
+</div>
+<!-- Card Base Action -->
+<div class="pt-2 border-t border-border-subtle/30 flex justify-end">
+<button aria-label="Replay speech aloud" class="h-10 px-4 rounded-xl bg-surface-interactive border border-border-subtle text-text-primary flex items-center gap-1.5 active:bg-surface-container-highest transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px] text-primary-container">volume_up</span>
+<span class="font-label-md text-label-md font-semibold">Replay</span>
+</button>
+</div>
+</div>
+</article>
+</section>
+<!-- Thumb-Zone Weighted & Integrated Input Deck (Ergonomic lower thumb container) -->
+<footer class="flex-shrink-0 bg-surface-container-lowest border-t-[1.5px] border-border-subtle px-margin pt-space-sm pb-space-md flex flex-col gap-space-sm shadow-2xl">
+<!-- Carousel Row positioned immediately above inputs -->
+<section aria-label="Quick response phrases" class="flex flex-col gap-1">
+<div class="flex items-center justify-between px-0.5">
+<span class="font-caption-status text-[11px] uppercase tracking-wider text-text-secondary">QUICK ASSIST PHRASES</span>
+<span class="font-caption-status text-[11px] text-primary-container font-semibold">Swipe for more</span>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+<!-- Quick Reply Pill 1 -->
+<button class="quick-reply-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-surface-interactive border-[1.5px] border-border-subtle active:border-primary-container text-text-primary font-label-md text-label-md flex items-center gap-1.5 transition-all shadow-sm" data-phrase="السلام علیکم" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary-container">chat_bubble</span>
+<span class="font-bold" dir="rtl" lang="ur">السلام علیکم</span>
+</button>
+<!-- Quick Reply Pill 2 -->
+<button class="quick-reply-btn flex-shrink-0 h-10 px-3.5 rounded-xl bg-surface-interactive border-[1.5px] border-border-subtle active:border-primary-container text-text-primary font-label-md text-label-md flex items-center gap-1.5 transition-all shadow-sm" data-phrase="Please speak slowly" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary-container">slow_motion_video</span>
+<span>Please speak slowly</span>
+</button>
+</div>
+</section>
+<!-- Thumb-Reachable Grid Input Bar: Field alongside prominent tactile Speak Button -->
+<div class="grid grid-cols-[1fr_auto] gap-2.5 items-center w-full">
+<!-- Interactive Assistive Input Field -->
+<div class="relative w-full">
+<label class="sr-only" for="tts-input">Type reply to speak aloud</label>
+<input class="w-full h-14 pl-4 pr-11 rounded-2xl bg-surface-container-low border-[1.5px] border-border-subtle focus:border-2 focus:border-primary-container text-text-primary placeholder:text-text-secondary/70 font-body-lg text-body-lg outline-none transition-all shadow-inner" id="tts-input" placeholder="Type reply to speak aloud" type="text"/>
+<button aria-label="Clear typed text" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary active:bg-surface-interactive" id="clear-input-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Oversized Tactile Primary Action Trigger -->
+<button aria-label="Speak response aloud via speech synthesizer" class="h-14 px-5 rounded-2xl bg-primary-container active:bg-primary-fixed-dim text-surface-container-lowest flex items-center justify-center gap-2 font-label-lg text-label-lg font-bold shadow-[0_0_20px_rgba(56,189,248,0.35)] active:scale-[0.98] transition-all flex-shrink-0" id="speak-trigger" type="button">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">campaign</span>
+<span>Speak</span>
+</button>
+</div>
+<!-- Tactile Sensory Guidance Hint -->
+<div class="flex items-center justify-center gap-1.5 text-center pt-0.5">
+<span class="material-symbols-outlined text-[15px] text-text-secondary">touch_app</span>
+<p class="font-caption-status text-[12px] text-text-secondary">
+          Double-tap Speak or press Enter to broadcast voice
+        </p>
+</div>
+</footer>
+</main>
+<script>
+    (function initConversationMode() {
+      const input = document.getElementById('tts-input');
+      const clearBtn = document.getElementById('clear-input-btn');
+      const speakBtn = document.getElementById('speak-trigger');
+      const quickChips = document.querySelectorAll('.quick-reply-btn');
+      const stream = document.getElementById('transcript-stream');
+
+      if (input && clearBtn) {
+        input.addEventListener('input', () => {
+          if (input.value.trim().length > 0) {
+            clearBtn.classList.remove('hidden');
+          } else {
+            clearBtn.classList.add('hidden');
+          }
+        });
+
+        clearBtn.addEventListener('click', () => {
+          input.value = '';
+          clearBtn.classList.add('hidden');
+          input.focus();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            executeSpeak();
+          }
+        });
+      }
+
+      quickChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          const phrase = chip.getAttribute('data-phrase');
+          if (phrase && input) {
+            input.value = phrase;
+            if (clearBtn) clearBtn.classList.remove('hidden');
+            input.focus();
+          }
+        });
+      });
+
+      function executeSpeak() {
+        if (!input) return;
+        const text = input.value.trim();
+        if (!text) {
+          input.focus();
+          return;
+        }
+
+        if (stream) {
+          const article = document.createElement('article');
+          article.className = 'w-full flex flex-col items-end';
+          article.innerHTML = `
+            <div class="w-full max-w-[92%] bg-surface-interactive border-2 border-primary-container rounded-2xl rounded-tr-sm p-4 flex flex-col gap-space-sm shadow-[0_0_16px_rgba(56,189,248,0.15)]">
+              <div class="flex items-center justify-between w-full border-b border-border-subtle/60 pb-2">
+                <span class="font-caption-status text-caption-status text-text-secondary">Just now</span>
+                <div class="flex items-center gap-1.5 text-primary-container font-semibold">
+                  <span class="font-label-md text-label-md">You (Spoken Aloud)</span>
+                  <span class="material-symbols-outlined text-[18px]">campaign</span>
+                </div>
+              </div>
+              <p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words py-1">${escapeHTML(text)}</p>
+              <div class="pt-2 border-t border-border-subtle/40 flex items-center justify-between w-full">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest border border-border-subtle">
+                  <span class="material-symbols-outlined text-[16px] text-secondary-fixed">check_circle</span>
+                  <span class="font-caption-status text-caption-status text-secondary-fixed">Spoken via TTS</span>
+                </div>
+              </div>
+            </div>
+          `;
+          stream.appendChild(article);
+          stream.scrollTop = stream.scrollHeight;
+        }
+
+        input.value = '';
+        if (clearBtn) clearBtn.classList.add('hidden');
+      }
+
+      if (speakBtn) {
+        speakBtn.addEventListener('click', executeSpeak);
+      }
+
+      function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+          tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+      }
+    })();
+  </script>
+</body></html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><title>Comfety</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Noto+Nastaliq+Urdu:wght@400;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "danger-hazard": "#EF4444", "on-secondary-fixed": "#002114", "tertiary": "#c5cce6", "on-primary-fixed": "#001e2c", "primary-fixed": "#c4e7ff", "outline-variant": "#3e484f", "on-tertiary-fixed-variant": "#3f465b", "secondary-fixed-dim": "#45dfa4", "secondary-fixed": "#68fcbf", "surface-container-high": "#262a34", "tertiary-fixed": "#dae2fc", "outline": "#87929a", "inverse-primary": "#00668a", "on-error-container": "#ffdad6", "warning-hazard": "#F59E0B", "secondary-container": "#00bd85", "surface-container-lowest": "#0a0e17", "on-primary": "#00354a", "on-surface-variant": "#bdc8d1", "text-primary": "#F8FAFC", "primary-container": "#38bdf8", "on-error": "#690005", "on-tertiary-fixed": "#131b2e", "on-tertiary": "#283044", "surface-container-low": "#181b25", "tertiary-container": "#a9b1ca", "surface-interactive": "#1E293B", "inverse-on-surface": "#2c303a", "on-surface": "#dfe2ef", "tertiary-fixed-dim": "#bec6e0", "error-container": "#93000a", "on-secondary-fixed-variant": "#005137", "surface-tint": "#7bd0ff", "secondary": "#45dfa4", "primary-fixed-dim": "#7bd0ff", "error": "#ffb4ab", "on-tertiary-container": "#3c4459", "on-primary-container": "#004965", "surface-bright": "#353943", "on-primary-fixed-variant": "#004c69", "on-secondary-container": "#00452e", "surface-container": "#1c1f29", "surface-container-highest": "#31353f", "inverse-surface": "#dfe2ef", "background": "#0f131c", "text-secondary": "#CBD5E1", "on-background": "#dfe2ef", "border-subtle": "#334155", "surface": "#0f131c", "primary": "#8ed5ff", "surface-variant": "#31353f", "surface-dim": "#0f131c", "on-secondary": "#003825" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px" }, spacing: { "space-sm": "0.5rem", "space-xs": "0.25rem", "space-lg": "1.25rem", "space-md": "1rem", "gutter": "1rem", "margin": "1rem", "space-xl": "1.75rem" }, fontFamily: { "sans": ["Inter", "sans-serif"], "urdu": ["'Noto Nastaliq Urdu'", "serif"], "headline-lg": ["Inter", "sans-serif"], "headline-sm": ["Inter", "sans-serif"], "headline-lg-mobile": ["Inter", "sans-serif"], "body-md": ["Inter", "sans-serif"], "body-transcript": ["Inter", "sans-serif"], "caption-status": ["Inter", "sans-serif"], "label-md": ["Inter", "sans-serif"], "label-lg": ["Inter", "sans-serif"], "body-lg": ["Inter", "sans-serif"], "headline-md": ["Inter", "sans-serif"] }, fontSize: { "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }], "headline-sm": ["19px", { lineHeight: "26px", fontWeight: "600" }], "headline-lg-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.015em", fontWeight: "700" }], "body-md": ["15px", { lineHeight: "22px", fontWeight: "400" }], "body-transcript": ["22px", { lineHeight: "32px", letterSpacing: "0.01em", fontWeight: "600" }], "caption-status": ["13px", { lineHeight: "18px", letterSpacing: "0.06em", fontWeight: "600" }], "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.04em", fontWeight: "600" }], "label-lg": ["17px", { lineHeight: "24px", fontWeight: "700" }], "body-lg": ["17px", { lineHeight: "26px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "30px", letterSpacing: "-0.01em", fontWeight: "600" }] } } } }</script><style>@layer base { html, body { margin: 0; padding: 0; width: 100%; height: 100%; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 12px); } .pt-safe { padding-top: env(safe-area-inset-top, 12px); } } ::-webkit-scrollbar { display: none; } body { min-height: 100vh; min-height: 100dvh; }</style></head><body class="bg-surface text-on-surface antialiased flex flex-col h-screen overflow-hidden pt-safe pb-safe"><main class="flex-1 flex flex-col h-full w-full relative overflow-hidden bg-surface">
+<!-- Upper Half: Camera Viewfinder Viewport with Guidance Overlays -->
+<div class="relative w-full flex-1 min-h-[260px] overflow-hidden bg-surface-container-lowest" id="camera-viewfinder">
+<!-- Camera Feed Background Layer -->
+<div class="absolute inset-0 bg-cover bg-center opacity-40" data-alt="First-person indoor viewpoint looking at a warm wooden tabletop holding a medicine box of Panadol Extra with ambient soft indoor lighting, slight realistic motion camera grain, low-light optimized contrast suitable for assistive computer vision detection" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB3GGd_0Hii4DBMTWDKdeJsKve4-EYBABG_N5Tc8iM2AL3D1saIAB3UlV-lkKLZHRpQNBGzh0SqVKuyvnHQCIvwWNtWsC6QbdVMH0fnnEPeSnZ1jYAE2sQ_Udx95AfgT_33UDoYRd4ES0DhHON0OuvZ0cSNoiT_nRUnyoQgDvkXYLueYbpFuGwqRihFAtkGnvZA33iuH-Q9NNgi6h2UG4YiQXxtS-mp4B_8ecE6RjP8')"></div>
+<!-- LiDAR Depth Matrix & Subtle Grid Overlay -->
+<div class="absolute inset-0 bg-gradient-to-b from-surface/80 via-transparent to-surface/90 pointer-events-none"></div>
+<svg class="absolute inset-0 w-full h-full opacity-30 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="28" id="lidar-grid" patternunits="userSpaceOnUse" width="28">
+<circle cx="2" cy="2" fill="#45dfa4" r="1.2"></circle>
+<circle cx="16" cy="16" fill="#38bdf8" r="0.8"></circle>
+</pattern>
+</defs>
+<rect fill="url(#lidar-grid)" height="100%" width="100%"></rect>
+</svg>
+<!-- Top Overlay Command Bar -->
+<div class="absolute top-2 inset-x-3 flex items-center justify-between gap-2 z-20">
+<!-- Back to Comfety Home Button (48dp target) -->
+<button aria-label="Return to Comfety Home" class="w-12 h-12 rounded-xl bg-surface-container-high/90 backdrop-blur-md flex items-center justify-center text-text-primary shadow-sm active:scale-95 transition-transform" type="button">
+<span class="material-symbols-outlined text-headline-sm">arrow_back</span>
+</button>
+<!-- Center Status Pill -->
+<div class="flex-1 flex items-center justify-center h-12 px-3 rounded-xl bg-surface-container-high/90 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-md text-label-md text-text-primary whitespace-nowrap">Obstacle Alerts: ON</span>
+</div>
+</div>
+<!-- Quick Action Controls (Audio & Flash) -->
+<div class="flex items-center gap-1.5">
+<button aria-label="Toggle camera flashlight" class="w-12 h-12 rounded-xl bg-surface-container-high/90 backdrop-blur-md flex items-center justify-center text-text-primary active:scale-95 transition-transform" id="torch-toggle-btn" type="button">
+<span class="material-symbols-outlined text-headline-sm" id="torch-icon">flash_on</span>
+</button>
+<button aria-label="Mute or unmute ambient audio guide" class="w-12 h-12 rounded-xl bg-surface-container-high/90 backdrop-blur-md flex items-center justify-center text-text-primary active:scale-95 transition-transform" id="sound-toggle-btn" type="button">
+<span class="material-symbols-outlined text-headline-sm" id="sound-icon">volume_up</span>
+</button>
+</div>
+</div>
+<!-- Active High-Visibility Alert Banner (Caution stairs) -->
+<div class="absolute top-16 inset-x-3 z-20 flex items-center gap-2.5 p-2.5 rounded-xl bg-warning-hazard text-surface-container-lowest shadow-md">
+<div class="w-7 h-7 rounded-lg bg-surface-container-lowest/15 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-label-lg text-surface-container-lowest" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md font-bold tracking-tight leading-tight">Caution: Stairs ahead (2m)</span>
+<span class="font-caption-status text-caption-status opacity-90 text-[12px] leading-tight">Descending stairs detected ahead</span>
+</div>
+</div>
+<!-- Central Viewfinder Bounding Reticle (Target Locked) -->
+<div class="absolute inset-0 m-auto w-48 h-36 flex flex-col justify-between p-1.5 z-10 pointer-events-none">
+<div class="flex justify-between w-full">
+<span class="w-5 h-5 border-t-4 border-l-4 border-secondary rounded-tl"></span>
+<span class="w-5 h-5 border-t-4 border-r-4 border-secondary rounded-tr"></span>
+</div>
+<div class="self-center flex flex-col items-center gap-1 bg-surface-container-high/90 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm border border-border-subtle/50">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-label-md animate-spin" style="animation-duration: 4s;">filter_center_focus</span>
+<span class="font-label-md text-[13px] text-text-primary tracking-wide">TARGET LOCKED</span>
+</div>
+<span class="font-caption-status text-[11px] text-secondary font-bold">98% Match • 35cm</span>
+</div>
+<div class="flex justify-between w-full">
+<span class="w-5 h-5 border-b-4 border-l-4 border-secondary rounded-bl"></span>
+<span class="w-5 h-5 border-b-4 border-r-4 border-secondary rounded-br"></span>
+</div>
+</div>
+<!-- Active Status Overlay Floating Badge & Spatial Horizon -->
+<div class="absolute bottom-4 inset-x-3 flex items-center justify-between z-15 pointer-events-none">
+<div class="flex items-center gap-1.5 bg-surface-container-high/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-border-subtle/40">
+<span class="material-symbols-outlined text-label-md text-primary">explore</span>
+<span class="font-caption-status text-caption-status text-on-surface-variant">Facing North-East</span>
+</div>
+<div class="flex items-center gap-1.5 bg-surface-container-high/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-border-subtle/40">
+<span class="material-symbols-outlined text-label-md text-secondary">sensors</span>
+<span class="font-caption-status text-caption-status text-on-surface-variant">Vision AI Active</span>
+</div>
+</div>
+</div>
+<!-- Lower Half: Anchored Bottom-Sheet Command Console -->
+<div class="w-full bg-surface-container-high border-t border-border-subtle rounded-t-3xl shadow-2xl flex flex-col z-30 relative shrink-0">
+<!-- Bottom Sheet Pull Handle Indicator -->
+<div class="w-full flex justify-center pt-2 pb-1">
+<div class="w-10 h-1 rounded-full bg-outline-variant"></div>
+</div>
+<div class="px-3.5 pb-2 flex flex-col gap-2.5">
+<!-- Assistant Header Bar with Status Pill -->
+<div class="flex items-center justify-between px-1">
+<div class="inline-flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-label-md text-label-md text-text-primary font-bold">AI Voice Assistant • Label Reader</span>
+</div>
+<span class="font-caption-status text-caption-status text-secondary font-semibold">Just Now</span>
+</div>
+<!-- High-Contrast Medicine Transcription Card -->
+<div class="w-full bg-surface-container-lowest/90 rounded-2xl p-3.5 border border-border-subtle/80 flex flex-col gap-2 shadow-inner">
+<!-- English Label Prescription -->
+<p class="font-headline-sm text-headline-sm text-text-primary font-bold leading-snug">
+          Medicine label: Panadol Extra. Take 1 to 2 tablets every 6 hours.
+        </p>
+<!-- Urdu Nastaliq Translation -->
+<p class="font-urdu text-body-transcript text-secondary font-semibold text-right dir-rtl leading-relaxed">
+          پیناڈول ایکسٹرا: ہر 6 گھنٹے بعد 1 سے 2 گولیاں لیں۔
+        </p>
+<!-- Transcription Action Buttons -->
+<div class="grid grid-cols-2 gap-2 pt-1 border-t border-border-subtle/50 mt-1">
+<button class="h-12 min-h-[48px] px-3 rounded-xl bg-primary-container text-surface-container-lowest font-label-lg text-label-md flex items-center justify-center gap-2 active:scale-98 transition-transform font-bold" id="replay-btn" type="button">
+<span class="material-symbols-outlined text-headline-sm" style="font-variation-settings: 'FILL' 1;">volume_up</span>
+<span>Replay Audio</span>
+</button>
+<button class="h-12 min-h-[48px] px-3 rounded-xl bg-surface-container-highest text-text-primary font-label-lg text-label-md flex items-center justify-center gap-2 active:scale-98 transition-transform border border-border-subtle" type="button">
+<span class="material-symbols-outlined text-headline-sm">read_more</span>
+<span>More Details</span>
+</button>
+</div>
+</div>
+<!-- Tactile Gesture Command Grid (48dp+ Accessible Cards) -->
+<div class="grid grid-cols-3 gap-2">
+<!-- 1x Tap Target -->
+<button aria-label="1x Tap: Ask question or read scene aloud" class="h-20 min-h-[48px] rounded-2xl bg-surface-interactive border border-border-subtle/70 p-2 flex flex-col items-center justify-center gap-1 active:bg-surface-bright text-center transition-all shadow-sm active:scale-95" type="button">
+<span class="material-symbols-outlined text-headline-sm text-primary">touch_app</span>
+<span class="font-caption-status text-caption-status text-text-primary leading-tight font-bold">1x Tap</span>
+<span class="font-caption-status text-[11px] text-text-secondary leading-none">1x Tap: Ask / Read</span>
+</button>
+<!-- 2x Tap Target -->
+<button aria-label="2x Tap: Simplify information" class="h-20 min-h-[48px] rounded-2xl bg-surface-interactive border border-secondary/40 p-2 flex flex-col items-center justify-center gap-1 active:bg-surface-bright text-center transition-all shadow-sm active:scale-95 ring-1 ring-secondary/20" type="button">
+<span class="material-symbols-outlined text-headline-sm text-secondary">pinch</span>
+<span class="font-caption-status text-caption-status text-text-primary leading-tight font-bold">2x Tap</span>
+<span class="font-caption-status text-[11px] text-text-secondary leading-none">2x Tap: Simplify</span>
+</button>
+<!-- Hold Target -->
+<button aria-label="Hold: Toggle hazard and obstacle alerts" class="h-20 min-h-[48px] rounded-2xl bg-surface-interactive border border-border-subtle/70 p-2 flex flex-col items-center justify-center gap-1 active:bg-surface-bright text-center transition-all shadow-sm active:scale-95" type="button">
+<span class="material-symbols-outlined text-headline-sm text-warning-hazard">notifications_active</span>
+<span class="font-caption-status text-caption-status text-text-primary leading-tight font-bold">Hold</span>
+<span class="font-caption-status text-[11px] text-text-secondary leading-none">Hold: Toggle Alerts</span>
+</button>
+</div>
+<!-- Bottom Status Strip: Haptic Gestures & Accessibility Tier -->
+<div class="flex items-center justify-between px-2 py-1 bg-surface-container-low rounded-xl border border-border-subtle/40">
+<span class="font-caption-status text-caption-status text-on-surface-variant flex items-center gap-1.5 font-medium">
+<span class="material-symbols-outlined text-secondary text-label-md">vibration</span>
+          Haptic tactile gestures active
+        </span>
+<span class="font-caption-status text-caption-status text-primary font-bold tracking-wide">Ultra-Accessible</span>
+</div>
+</div>
+</div>
+<script>
+    // Micro-interactions for tactile voice & toggle feedback
+    const replayBtn = document.getElementById('replay-btn');
+    const torchToggle = document.getElementById('torch-toggle-btn');
+    const torchIcon = document.getElementById('torch-icon');
+    const soundToggle = document.getElementById('sound-toggle-btn');
+    const soundIcon = document.getElementById('sound-icon');
+
+    if (replayBtn) {
+      replayBtn.addEventListener('click', () => {
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+        replayBtn.classList.add('opacity-75');
+        setTimeout(() => replayBtn.classList.remove('opacity-75'), 300);
+      });
+    }
+
+    let torchActive = false;
+    if (torchToggle && torchIcon) {
+      torchToggle.addEventListener('click', () => {
+        torchActive = !torchActive;
+        torchIcon.textContent = torchActive ? 'flash_off' : 'flash_on';
+        torchToggle.classList.toggle('text-secondary', torchActive);
+        if (navigator.vibrate) navigator.vibrate(30);
+      });
+    }
+
+    let soundActive = true;
+    if (soundToggle && soundIcon) {
+      soundToggle.addEventListener('click', () => {
+        soundActive = !soundActive;
+        soundIcon.textContent = soundActive ? 'volume_up' : 'volume_off';
+        soundToggle.classList.toggle('text-danger-hazard', !soundActive);
+        if (navigator.vibrate) navigator.vibrate(30);
+      });
+    }
+  </script>
+</main></body></html>

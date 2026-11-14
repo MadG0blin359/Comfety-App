@@ -1,0 +1,158 @@
+<!DOCTYPE html><html class="dark" lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_blank" name="shell-type"><title>Comfety</title><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "danger-hazard": "#EF4444", "on-secondary-fixed": "#002114", "tertiary": "#c5cce6", "on-primary-fixed": "#001e2c", "primary-fixed": "#c4e7ff", "outline-variant": "#3e484f", "on-tertiary-fixed-variant": "#3f465b", "secondary-fixed-dim": "#45dfa4", "secondary-fixed": "#68fcbf", "surface-container-high": "#262a34", "tertiary-fixed": "#dae2fc", "outline": "#87929a", "inverse-primary": "#00668a", "on-error-container": "#ffdad6", "warning-hazard": "#F59E0B", "secondary-container": "#00bd85", "surface-container-lowest": "#0a0e17", "on-primary": "#00354a", "on-surface-variant": "#bdc8d1", "text-primary": "#F8FAFC", "primary-container": "#38bdf8", "on-error": "#690005", "on-tertiary-fixed": "#131b2e", "on-tertiary": "#283044", "surface-container-low": "#181b25", "tertiary-container": "#a9b1ca", "surface-interactive": "#1E293B", "inverse-on-surface": "#2c303a", "on-surface": "#dfe2ef", "tertiary-fixed-dim": "bec6e0", "error-container": "#93000a", "on-secondary-fixed-variant": "#005137", "surface-tint": "#7bd0ff", "secondary": "#45dfa4", "primary-fixed-dim": "#7bd0ff", "error": "#ffb4ab", "on-tertiary-container": "#3c4459", "on-primary-container": "#004965", "surface-bright": "#353943", "on-primary-fixed-variant": "#004c69", "on-secondary-container": "#00452e", "surface-container": "#1c1f29", "surface-container-highest": "#31353f", "inverse-surface": "#dfe2ef", "background": "#0f131c", "text-secondary": "#CBD5E1", "on-background": "#dfe2ef", "border-subtle": "#334155", "surface": "#0f131c", "primary": "#8ed5ff", "surface-variant": "#31353f", "surface-dim": "#0f131c", "on-secondary": "#003825" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-sm": "0.5rem", "space-xs": "0.25rem", "space-lg": "1.25rem", "space-md": "1rem", "gutter": "1rem", "margin": "1rem", "space-xl": "1.75rem" }, fontFamily: { "headline-lg": ["Inter"], "headline-sm": ["Inter"], "headline-lg-mobile": ["Inter"], "body-md": ["Inter"], "body-transcript": ["Inter"], "caption-status": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "body-lg": ["Inter"], "headline-md": ["Inter"] }, fontSize: { "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }], "headline-sm": ["19px", { lineHeight: "26px", fontWeight: "600" }], "headline-lg-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.015em", fontWeight: "700" }], "body-md": ["15px", { lineHeight: "22px", fontWeight: "400" }], "body-transcript": ["22px", { lineHeight: "32px", letterSpacing: "0.01em", fontWeight: "600" }], "caption-status": ["13px", { lineHeight: "18px", letterSpacing: "0.06em", fontWeight: "600" }], "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.04em", fontWeight: "600" }], "label-lg": ["17px", { lineHeight: "24px", fontWeight: "700" }], "body-lg": ["17px", { lineHeight: "26px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "30px", letterSpacing: "-0.01em", fontWeight: "600" }] } } } }</script><style>@layer base { html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); } .pt-safe { padding-top: env(safe-area-inset-top, 0px); } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen pt-safe pb-safe"><main class="flex-1 flex flex-col relative w-full bg-surface px-margin"><div class="flex flex-col w-full flex-1 pb-4 space-y-4 justify-between">
+<!-- Minimal Ambient Header -->
+<header class="flex items-center justify-between" style="padding-top: calc(env(safe-area-inset-top, 0px) + 1.25rem);"><div class="flex flex-col"><div class="flex items-center space-x-2"><h1 class="font-headline-lg-mobile text-headline-lg-mobile text-text-primary tracking-tight font-bold">Comfety</h1><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high text-secondary text-caption-status font-caption-status"><span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1.5 animate-pulse"></span> Ready </span></div><p class="font-body-md text-body-md text-text-secondary">Assistive Communication &amp; Navigation</p></div></header>
+<!-- Card 1: Conversation Mode -->
+<section aria-label="Open Conversation Mode. Live Urdu and English captions plus natural voice replies" class="w-full flex-1 min-h-[220px] relative overflow-hidden rounded-[20px] bg-on-tertiary-fixed p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none active:scale-[0.985]" id="card-conversation" role="button" style="box-shadow: rgb(56, 189, 248) 0px 0px 0px 2px, rgba(56, 189, 248, 0.28) 0px 10px 28px -10px;" tabindex="0">
+<!-- Background Ambient Glow Arc -->
+<div class="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-primary-container/10 pointer-events-none blur-2xl"></div>
+<!-- Top Row: Icon Container & High-Contrast Mode Tag -->
+<div class="flex items-start justify-between relative z-10">
+<div class="w-16 h-16 rounded-2xl bg-surface-interactive flex items-center justify-center text-primary-container" style="box-shadow: 0 0 0 1.5px #38BDF8;">
+<!-- Dual Ear + Speech Glyphs -->
+<div class="relative flex items-center justify-center">
+<span class="material-symbols-outlined text-[36px]" style="font-variation-settings: 'FILL' 1;">hearing</span>
+<span class="material-symbols-outlined text-[20px] absolute -bottom-1 -right-2 text-primary-fixed bg-on-tertiary-fixed rounded-full p-0.5" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+</div>
+<div class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-surface-interactive text-primary-container">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span class="font-caption-status text-caption-status tracking-wide">Bilingual AI</span>
+</div>
+</div>
+<!-- Center Content: Title & Details -->
+<div class="my-4 relative z-10">
+<div class="flex items-center space-x-2">
+<h2 class="font-headline-md text-headline-md text-text-primary font-bold tracking-tight">Conversation Mode</h2>
+</div>
+<p class="mt-1 font-body-md text-body-md text-text-secondary leading-snug">
+        Live Urdu &amp; English captions + natural voice replies
+      </p>
+</div>
+<!-- Bottom Affordance: Oversized Tactile Trigger -->
+<div class="relative z-10 pt-1">
+<div class="w-full h-14 rounded-xl bg-primary-container text-on-primary-container font-label-lg text-label-lg flex items-center justify-between px-4 font-bold shadow-md">
+<span class="flex items-center space-x-2 min-w-0">
+<span class="material-symbols-outlined text-[24px]">graphic_eq</span>
+<span class="truncate">Open Conversation</span>
+</span>
+<span class="material-symbols-outlined text-[28px] shrink-0">arrow_forward</span>
+</div>
+</div>
+</section>
+<!-- Card 2: Guide Mode -->
+<section aria-label="Start Guide Mode. Camera obstacle alerts, label reader, and voice assistant" class="w-full flex-1 min-h-[220px] relative overflow-hidden rounded-[20px] bg-on-tertiary-fixed p-5 flex flex-col justify-between transition-all duration-200 cursor-pointer select-none active:scale-[0.985]" id="card-guide" role="button" style="box-shadow: rgb(52, 211, 153) 0px 0px 0px 2px, rgba(52, 211, 153, 0.28) 0px 10px 28px -10px;" tabindex="0">
+<!-- Background Ambient Glow Arc -->
+<div class="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-secondary-container/10 pointer-events-none blur-2xl"></div>
+<!-- Top Row: Icon Container & Radar Status -->
+<div class="flex items-start justify-between relative z-10">
+<div class="w-16 h-16 rounded-2xl bg-surface-interactive flex items-center justify-center text-secondary-fixed-dim" style="box-shadow: 0 0 0 1.5px #34D399;">
+<!-- Dual Eye + Sonar Wave Glyphs -->
+<div class="relative flex items-center justify-center">
+<span class="material-symbols-outlined text-[36px]" style="font-variation-settings: 'FILL' 1;">visibility</span>
+<span class="material-symbols-outlined text-[20px] absolute -top-1 -right-2 text-secondary-fixed bg-on-tertiary-fixed rounded-full p-0.5" style="font-variation-settings: 'FILL' 1;">sensors</span>
+</div>
+</div>
+<!-- Tactile Pulse Visual Indicator -->
+<div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-surface-interactive text-secondary-fixed-dim">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
+</span>
+<span class="font-caption-status text-caption-status tracking-wide">Vision AI Ready</span>
+</div>
+</div>
+<!-- Center Content: Title & Details -->
+<div class="my-4 relative z-10">
+<div class="flex items-center space-x-2">
+<h2 class="font-headline-md text-headline-md text-text-primary font-bold tracking-tight">Guide Mode</h2>
+</div>
+<p class="mt-1 font-body-md text-body-md text-text-secondary leading-snug">
+        Camera obstacle alerts, label reader &amp; voice assistant
+      </p>
+</div>
+<!-- Bottom Affordance: Oversized Tactile Trigger -->
+<div class="relative z-10 pt-1">
+<div class="w-full h-14 rounded-xl bg-secondary-fixed-dim text-on-secondary-fixed font-label-lg text-label-lg flex items-center justify-between px-4 font-bold shadow-md">
+<span class="flex items-center space-x-2 min-w-0">
+<span class="material-symbols-outlined text-[24px]">radar</span>
+<span class="truncate">Start Guide Mode</span>
+</span>
+<span class="material-symbols-outlined text-[28px] shrink-0">arrow_forward</span>
+</div>
+</div>
+</section>
+<!-- Ambient Audio / Tactile Feedback Banner -->
+<footer class="pt-1"><div class="w-full bg-surface-interactive rounded-2xl p-4 flex items-center justify-between" style="box-shadow: rgb(51, 65, 85) 0px 0px 0px 1px;"><div class="flex items-center space-x-3 min-w-0 flex-1"><div class="w-10 h-10 rounded-xl bg-on-tertiary-fixed flex items-center justify-center shrink-0" style="color: #34D399;"><span class="material-symbols-outlined text-[24px]">mic</span></div><div class="min-w-0 pr-2"><p class="font-label-md text-label-md text-text-primary font-semibold">Auto-Voice &amp; No-Look Entry</p><p class="font-caption-status text-caption-status text-text-secondary leading-snug mt-0.5">Speaks automatically on open • Hold anywhere (2s) or shake to start Guide</p></div></div><span class="material-symbols-outlined text-[22px] shrink-0 ml-2" style="color: #34D399;">check_circle</span></div></footer>
+</div>
+<script>
+  // High-contrast Tactile Micro-Interactions & Haptic Emulation
+  const triggerHaptic = () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(35);
+    }
+  };
+
+  const cardConversation = document.getElementById('card-conversation');
+  const cardGuide = document.getElementById('card-guide');
+  const voiceToggle = document.getElementById('voice-status-toggle');
+
+  if (cardConversation) {
+    cardConversation.addEventListener('click', () => {
+      triggerHaptic();
+      cardConversation.style.transform = 'scale(0.97)';
+      setTimeout(() => {
+        cardConversation.style.transform = '';
+      }, 140);
+    });
+
+    cardConversation.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        cardConversation.click();
+      }
+    });
+  }
+
+  if (cardGuide) {
+    cardGuide.addEventListener('click', () => {
+      triggerHaptic();
+      cardGuide.style.transform = 'scale(0.97)';
+      setTimeout(() => {
+        cardGuide.style.transform = '';
+      }, 140);
+    });
+
+    cardGuide.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        cardGuide.click();
+      }
+    });
+  }
+
+  if (voiceToggle) {
+    let muted = false;
+    voiceToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerHaptic();
+      muted = !muted;
+      const icon = voiceToggle.querySelector('.material-symbols-outlined');
+      if (icon) {
+        icon.textContent = muted ? 'volume_off' : 'volume_up';
+      }
+      voiceToggle.setAttribute('aria-label', muted ? 'Voice cues muted' : 'Audio feedback is active');
+    });
+  }
+</script></main>
+
+
+
+
+
+</body></html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><title>Comfety</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "danger-hazard": "#EF4444", "on-secondary-fixed": "#002114", "tertiary": "#c5cce6", "on-primary-fixed": "#001e2c", "primary-fixed": "#c4e7ff", "outline-variant": "#3e484f", "on-tertiary-fixed-variant": "#3f465b", "secondary-fixed-dim": "#45dfa4", "secondary-fixed": "#68fcbf", "surface-container-high": "#262a34", "tertiary-fixed": "#dae2fc", "outline": "#87929a", "inverse-primary": "#00668a", "on-error-container": "#ffdad6", "warning-hazard": "#F59E0B", "secondary-container": "#00bd85", "surface-container-lowest": "#0a0e17", "on-primary": "#00354a", "on-surface-variant": "#bdc8d1", "text-primary": "#F8FAFC", "primary-container": "#38bdf8", "on-error": "#690005", "on-tertiary-fixed": "#131b2e", "on-tertiary": "#283044", "surface-container-low": "#181b25", "tertiary-container": "#a9b1ca", "surface-interactive": "#1E293B", "inverse-on-surface": "#2c303a", "on-surface": "#dfe2ef", "tertiary-fixed-dim": "bec6e0", "error-container": "#93000a", "on-secondary-fixed-variant": "#005137", "surface-tint": "#7bd0ff", "secondary": "#45dfa4", "primary-fixed-dim": "#7bd0ff", "error": "#ffb4ab", "on-tertiary-container": "#3c4459", "on-primary-container": "#004965", "surface-bright": "#353943", "on-primary-fixed-variant": "#004c69", "on-secondary-container": "#00452e", "surface-container": "#1c1f29", "surface-container-highest": "#31353f", "inverse-surface": "#dfe2ef", "background": "#0f131c", "text-secondary": "#CBD5E1", "on-background": "#dfe2ef", "border-subtle": "#334155", "surface": "#0f131c", "primary": "#8ed5ff", "surface-variant": "#31353f", "surface-dim": "#0f131c", "on-secondary": "#003825" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-sm": "0.5rem", "space-xs": "0.25rem", "space-lg": "1.25rem", "space-md": "1rem", "gutter": "1rem", "margin": "1rem", "space-xl": "1.75rem" }, fontFamily: { "headline-lg": ["Inter"], "headline-sm": ["Inter"], "headline-lg-mobile": ["Inter"], "body-md": ["Inter"], "body-transcript": ["Inter"], "caption-status": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "body-lg": ["Inter"], "headline-md": ["Inter"] }, fontSize: { "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }], "headline-sm": ["19px", { lineHeight: "26px", fontWeight: "600" }], "headline-lg-mobile": ["26px", { lineHeight: "34px", letterSpacing: "-0.015em", fontWeight: "700" }], "body-md": ["15px", { lineHeight: "22px", fontWeight: "400" }], "body-transcript": ["22px", { lineHeight: "32px", letterSpacing: "0.01em", fontWeight: "600" }], "caption-status": ["13px", { lineHeight: "18px", letterSpacing: "0.06em", fontWeight: "600" }], "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.04em", fontWeight: "600" }], "label-lg": ["17px", { lineHeight: "24px", fontWeight: "700" }], "body-lg": ["17px", { lineHeight: "26px", fontWeight: "400" }], "headline-md": ["22px", { lineHeight: "30px", letterSpacing: "-0.01em", fontWeight: "600" }] } } } }</script><style>@layer base { html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); } .pt-safe { padding-top: env(safe-area-inset-top, 0px); } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen pt-safe pb-safe"><main class="flex-1 flex flex-col relative w-full bg-surface px-margin"><div class="flex flex-col w-full">
+<!-- Top Ambient App Bar & Voice Controls -->
+<header class="flex flex-col gap-space-sm pt-space-xs pb-space-sm">
+<div class="flex items-center justify-between gap-space-sm">
+<!-- Back Action Button (Accessible 48dp target) -->
+<button aria-label="Return to previous screen" class="w-12 h-12 rounded-xl bg-surface-container-low border-[1.5px] border-border-subtle flex items-center justify-center text-text-primary active:bg-surface-interactive focus:outline-none focus:ring-2 focus:ring-primary-container transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<!-- Center Title & Status Breadcrumb -->
+<div class="flex-1 flex flex-col items-center text-center px-space-xs">
+<h1 class="font-headline-sm text-headline-sm text-text-primary tracking-tight">Conversation Mode</h1>
+<span class="font-caption-status text-caption-status text-text-secondary uppercase">Live Speech Relay</span>
+</div>
+<!-- Pill Voice Selector Droplist -->
+<button aria-label="Current voice: Ayesha Warm. Tap to change synthesis voice" class="h-12 px-space-md rounded-full bg-surface-interactive border-[1.5px] border-border-subtle flex items-center gap-space-xs text-text-primary active:border-primary-container transition-all shadow-sm" id="voice-picker-btn" type="button">
+<span class="material-symbols-outlined text-primary-container text-[20px]" style="font-variation-settings: 'FILL' 1;">volume_up</span>
+<span class="font-label-md text-label-md font-semibold text-text-primary whitespace-nowrap">Ayesha</span>
+<span class="material-symbols-outlined text-text-secondary text-[18px]">expand_more</span>
+</button>
+</div>
+<!-- Active Ambient Listening Status Pill with Animated Soundwave -->
+<div class="w-full bg-surface-container-low border-[1.5px] border-border-subtle rounded-xl px-space-md py-space-sm flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm">
+<span class="relative flex h-3 w-3 items-center justify-center">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-fixed opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary-fixed shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-text-primary font-bold">Listening</span>
+<span class="font-caption-status text-caption-status text-text-secondary">Urdu • English Bilingual</span>
+</div>
+</div>
+<!-- Live audio graphic bars with rhythmic CSS heights -->
+<div aria-hidden="true" class="flex items-center gap-1 h-6 px-space-xs">
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-2.5" style="animation-duration: 750ms;"></span>
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-5" style="animation-duration: 520ms;"></span>
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-3.5" style="animation-duration: 980ms;"></span>
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-6" style="animation-duration: 610ms;"></span>
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-4" style="animation-duration: 830ms;"></span>
+<span class="w-1 bg-secondary-fixed rounded-full animate-pulse h-2" style="animation-duration: 690ms;"></span>
+</div>
+</div>
+</header>
+<!-- Transcript Area: Generous 22px body-transcript typography, AAA contrast -->
+<section aria-label="Conversation Transcript" class="flex flex-col gap-space-md py-space-md overflow-y-auto" id="transcript-stream">
+<!-- Turn 1: Other Speaker (Left Aligned) -->
+<article class="flex flex-col items-start max-w-[92%] self-start">
+<div class="bg-surface-container-low border-[1.5px] border-border-subtle rounded-[20px] rounded-tl-sm p-space-lg flex flex-col gap-space-sm shadow-md">
+<div class="flex items-center justify-between w-full border-b border-border-subtle/50 pb-space-xs">
+<div class="flex items-center gap-space-xs text-text-secondary">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span class="font-label-md text-label-md">Partner / Counter</span>
+</div>
+<span class="font-caption-status text-caption-status text-text-secondary">10:24 AM</span>
+</div>
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words" dir="auto" lang="ur">
+          السلام علیکم، <span class="inline" dir="ltr" lang="en">how can I help you today?</span>
+</p>
+<div class="pt-space-xs flex justify-end">
+<button aria-label="Replay speech aloud" class="h-12 px-space-md rounded-xl bg-surface-interactive border border-border-subtle text-text-primary flex items-center gap-space-xs active:bg-surface-container-highest transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px] text-primary-container">volume_up</span>
+<span class="font-label-md text-label-md font-semibold">Replay</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Turn 2: User TTS Broadcast (Right Aligned) -->
+<article class="flex flex-col items-end max-w-[92%] self-end">
+<div class="bg-surface-interactive border-2 border-primary-container rounded-[20px] rounded-tr-sm p-space-lg flex flex-col gap-space-sm shadow-[0_0_16px_rgba(56,189,248,0.15)]">
+<div class="flex items-center justify-between w-full border-b border-border-subtle/60 pb-space-xs">
+<span class="font-caption-status text-caption-status text-text-secondary">10:24 AM</span>
+<div class="flex items-center gap-space-xs text-primary-container font-semibold">
+<span class="font-label-md text-label-md">You (Spoken Aloud)</span>
+<span class="material-symbols-outlined text-[18px]">campaign</span>
+</div>
+</div>
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words">
+          I am looking for the pharmacy counter, please.
+        </p>
+<div class="pt-space-xs flex items-center justify-between w-full">
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest border border-border-subtle">
+<span class="material-symbols-outlined text-[16px] text-secondary-fixed">check_circle</span>
+<span class="font-caption-status text-caption-status text-secondary-fixed">Spoken via TTS</span>
+</div>
+<button aria-label="Play again" class="w-12 h-12 rounded-xl bg-surface-container-low border border-border-subtle flex items-center justify-center text-text-primary active:bg-surface-container transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px] text-primary-container">replay</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Turn 3: Other Speaker (Left Aligned) -->
+<article class="flex flex-col items-start max-w-[92%] self-start">
+<div class="bg-surface-container-low border-[1.5px] border-border-subtle rounded-[20px] rounded-tl-sm p-space-lg flex flex-col gap-space-sm shadow-md">
+<div class="flex items-center justify-between w-full border-b border-border-subtle/50 pb-space-xs">
+<div class="flex items-center gap-space-xs text-text-secondary">
+<span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+<span class="font-label-md text-label-md">Partner / Counter</span>
+</div>
+<span class="font-caption-status text-caption-status text-text-secondary">10:25 AM</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words">
+            It's straight ahead on the right side.
+          </p>
+<p class="font-body-transcript text-body-transcript text-text-secondary leading-loose break-words" dir="rtl" lang="ur">
+            سیدھے ہاتھ پر سامنے ہے۔
+          </p>
+</div>
+<div class="pt-space-xs flex justify-end">
+<button aria-label="Replay speech aloud" class="h-12 px-space-md rounded-xl bg-surface-interactive border border-border-subtle text-text-primary flex items-center gap-space-xs active:bg-surface-container-highest transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px] text-primary-container">volume_up</span>
+<span class="font-label-md text-label-md font-semibold">Replay</span>
+</button>
+</div>
+</div>
+</article>
+</section>
+<!-- Quick-Reply Tactile Horizontal Strip -->
+<section aria-label="Predictive autocomplete phrases" class="flex flex-col gap-space-xs my-space-sm"><div class="flex items-center justify-between px-space-xs"><div class="flex items-center gap-1.5 text-primary-container font-caption-status text-caption-status"><span class="material-symbols-outlined text-[16px]">auto_awesome</span><span class="font-bold uppercase tracking-tight">Smart Completions</span></div><span class="font-caption-status text-caption-status text-text-secondary">Tap to insert</span></div><div class="flex items-center gap-space-sm overflow-x-auto pb-space-xs no-scrollbar py-1"><button class="quick-reply-btn flex-shrink-0 h-11 px-space-md rounded-[14px] bg-surface-interactive border-[1.5px] border-primary-container/60 text-text-primary font-label-md text-label-md flex items-center gap-space-xs shadow-sm active:border-primary-container" type="button"><span class="material-symbols-outlined text-[16px] text-primary-container">north_west</span><span>Where is the counter?</span></button><button class="quick-reply-btn flex-shrink-0 h-11 px-space-md rounded-[14px] bg-surface-interactive border-[1.5px] border-border-subtle text-text-primary font-label-md text-label-md flex items-center gap-space-xs shadow-sm active:border-primary-container" type="button"><span class="material-symbols-outlined text-[16px] text-primary-container">payments</span><span>How much is this?</span></button><button class="quick-reply-btn flex-shrink-0 h-11 px-space-md rounded-[14px] bg-surface-interactive border-[1.5px] border-border-subtle text-text-primary font-label-md text-label-md flex items-center gap-space-xs shadow-sm active:border-primary-container" type="button"><span class="material-symbols-outlined text-[16px] text-primary-container">favorite</span><span>Thank you (<span class="font-bold" dir="rtl" lang="ur">شکریہ</span>)</span></button></div></section>
+<!-- Sticky Hand-Anchored Bottom Input Dock -->
+<footer class="mt-auto bg-surface-container-lowest border-t-[1.5px] border-border-subtle -mx-margin px-margin pt-space-sm pb-space-sm flex flex-col gap-space-sm shadow-2xl"><div class="flex items-center gap-space-sm w-full"><div class="relative flex-1"><label class="sr-only" for="tts-input">Type reply to speak aloud</label><div class="w-full min-h-[56px] px-space-md py-space-xs rounded-[16px] bg-surface-container-low border-2 border-primary-container flex items-center justify-between gap-space-xs shadow-inner"><div class="flex items-center flex-wrap gap-1 text-text-primary font-body-lg text-body-lg flex-1"><span class="text-text-primary">Where is the exit?</span><span class="text-primary-container font-semibold" dir="rtl" lang="ur">کیا آپ بتا سکتے ہیں</span><span class="inline-block w-[2px] h-6 bg-primary-container animate-pulse"></span></div><button aria-label="Clear typed text" class="w-10 h-10 rounded-lg flex items-center justify-center text-text-secondary hover:text-text-primary active:bg-surface-interactive flex-shrink-0" id="clear-input-btn" type="button"><span class="material-symbols-outlined text-[20px]">close</span></button></div></div><button aria-label="Broadcast Aloud via Speech Synthesizer" class="h-14 px-space-md rounded-[16px] bg-primary-container active:bg-primary-fixed-dim text-surface-container-lowest flex items-center justify-center gap-space-xs font-label-lg text-label-lg font-bold shadow-[0_0_20px_rgba(56,189,248,0.35)] active:scale-[0.98] transition-all flex-shrink-0" id="speak-trigger" type="button"><span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">campaign</span><span class="whitespace-nowrap text-[15px]">Broadcast Aloud</span></button></div><div class="w-full flex flex-col gap-1.5 pt-1"><div class="flex items-center justify-between px-space-xs pb-1 border-b border-border-subtle/50"><div class="flex items-center gap-1.5"><button class="px-2.5 py-1 rounded-full bg-surface-interactive border border-primary-container text-primary-container font-label-md text-[13px] font-bold flex items-center gap-1" type="button"><span class="material-symbols-outlined text-[15px]">translate</span><span>Urdu / English</span></button><span class="font-caption-status text-caption-status text-text-secondary">Voice Typing Ready</span></div><div class="flex items-center gap-2"><button aria-label="Dictate speech" class="w-8 h-8 rounded-lg bg-surface-container-low border border-border-subtle flex items-center justify-center text-primary-container active:bg-surface-interactive" type="button"><span class="material-symbols-outlined text-[18px]">mic</span></button><button aria-label="Hide keyboard" class="w-8 h-8 rounded-lg bg-surface-container-low border border-border-subtle flex items-center justify-center text-text-secondary active:bg-surface-interactive" type="button"><span class="material-symbols-outlined text-[18px]">keyboard_hide</span></button></div></div><div class="flex flex-col gap-1.5 w-full select-none pt-1"><div class="flex justify-center gap-1 w-full"><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">Q</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">W</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">E</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">R</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">T</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">Y</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">U</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">I</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">O</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center active:bg-primary-container active:text-surface-lowest text-[16px]" type="button">P</button></div><div class="flex justify-center gap-1 w-full px-2"><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">A</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">S</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">D</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">F</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">G</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">H</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">J</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">K</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">L</button></div><div class="flex justify-center gap-1.5 w-full"><button aria-label="Shift uppercase" class="w-10 h-11 rounded-lg bg-surface-container-high border border-border-subtle text-text-secondary flex items-center justify-center active:bg-surface-interactive" type="button"><span class="material-symbols-outlined text-[18px]">shift</span></button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">Z</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">X</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">C</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">V</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">B</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">N</button><button class="flex-1 h-11 max-w-[34px] rounded-lg bg-surface-interactive border border-border-subtle text-text-primary font-bold text-center flex items-center justify-center text-[16px]" type="button">M</button><button aria-label="Backspace delete" class="w-10 h-11 rounded-lg bg-surface-container-high border border-border-subtle text-text-secondary flex items-center justify-center active:bg-surface-interactive" type="button"><span class="material-symbols-outlined text-[18px]">backspace</span></button></div><div class="flex items-center justify-between gap-1.5 w-full pt-1"><button class="h-11 px-3 rounded-lg bg-surface-container-high border border-border-subtle text-text-secondary font-label-md text-[14px]" type="button">?123</button><button class="h-11 px-3 rounded-lg bg-surface-container-high border border-border-subtle text-text-secondary flex items-center justify-center" type="button"><span class="material-symbols-outlined text-[18px]">language</span></button><button class="flex-1 h-11 rounded-lg bg-surface-interactive border border-border-subtle text-text-secondary font-label-md text-[14px] flex items-center justify-center shadow-sm" type="button">Space (Urdu / English)</button><button class="h-11 px-4 rounded-lg bg-primary-container text-surface-container-lowest font-bold text-label-md flex items-center justify-center gap-1" type="button"><span class="material-symbols-outlined text-[18px]">keyboard_return</span></button></div></div></div></footer>
+</div>
+<script>
+  (function initConversationMode() {
+    const input = document.getElementById('tts-input');
+    const clearBtn = document.getElementById('clear-input-btn');
+    const speakBtn = document.getElementById('speak-trigger');
+    const quickChips = document.querySelectorAll('.quick-reply-btn');
+    const stream = document.getElementById('transcript-stream');
+
+    // Input state management
+    if (input && clearBtn) {
+      input.addEventListener('input', () => {
+        if (input.value.trim().length > 0) {
+          clearBtn.classList.remove('hidden');
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+      });
+
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.classList.add('hidden');
+        input.focus();
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeSpeak();
+        }
+      });
+    }
+
+    // Quick chip click insertion
+    quickChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const phrase = chip.getAttribute('data-phrase');
+        if (phrase && input) {
+          input.value = phrase;
+          if (clearBtn) clearBtn.classList.remove('hidden');
+          input.focus();
+        }
+      });
+    });
+
+    // Speak Button Execution with Accessible Visual Feedback
+    function executeSpeak() {
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) {
+        input.focus();
+        return;
+      }
+
+      // Add user bubble dynamically to transcript
+      if (stream) {
+        const article = document.createElement('article');
+        article.className = 'flex flex-col items-end max-w-[92%] self-end animate-fade-in';
+        article.innerHTML = `
+          <div class="bg-surface-interactive border-2 border-primary-container rounded-[20px] rounded-tr-sm p-space-lg flex flex-col gap-space-sm shadow-[0_0_16px_rgba(56,189,248,0.15)]">
+            <div class="flex items-center justify-between w-full border-b border-border-subtle/60 pb-space-xs">
+              <span class="font-caption-status text-caption-status text-text-secondary">Just now</span>
+              <div class="flex items-center gap-space-xs text-primary-container font-semibold">
+                <span class="font-label-md text-label-md">You (Spoken Aloud)</span>
+                <span class="material-symbols-outlined text-[18px]">campaign</span>
+              </div>
+            </div>
+            <p class="font-body-transcript text-body-transcript text-text-primary leading-relaxed break-words">${escapeHTML(text)}</p>
+            <div class="pt-space-xs flex items-center justify-between w-full">
+              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest border border-border-subtle">
+                <span class="material-symbols-outlined text-[16px] text-secondary-fixed">check_circle</span>
+                <span class="font-caption-status text-caption-status text-secondary-fixed">Spoken via TTS</span>
+              </div>
+            </div>
+          </div>
+        `;
+        stream.appendChild(article);
+        stream.scrollTop = stream.scrollHeight;
+      }
+
+      // Clear input after speech broadcast
+      input.value = '';
+      if (clearBtn) clearBtn.classList.add('hidden');
+    }
+
+    if (speakBtn) {
+      speakBtn.addEventListener('click', executeSpeak);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+  })();
+</script></main>
+</body></html>
