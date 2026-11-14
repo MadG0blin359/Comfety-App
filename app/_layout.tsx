@@ -2,19 +2,26 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Audio } from 'expo-av';
 import { THEME } from '../src/constants/theme';
 
 export default function RootLayout() {
   useEffect(() => {
-    // Configure audio mode to bypass physical silent switch on iOS and handle ducking on Android
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    }).catch((err) => {
-      console.warn('[RootLayout] Failed to configure audio session:', err);
-    });
+    try {
+      // Dynamically load to prevent native module evaluation crashes when running in Expo Go
+      // In native development client builds, this configures the audio session cleanly
+      const { Audio } = require('expo-av');
+      if (Audio?.setAudioModeAsync) {
+        Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+          shouldDuckAndroid: true,
+        }).catch((err: unknown) => {
+          console.warn('[RootLayout] Audio session warning:', err);
+        });
+      }
+    } catch {
+      // Safe fallback when ExponentAV native module is not linked in the current host (e.g. standard Expo Go)
+    }
   }, []);
 
   return (

@@ -1,10 +1,13 @@
-import { Audio } from 'expo-av';
-import { VisionCamera, PermissionStatus } from 'react-native-vision-camera';
 import { Linking } from 'react-native';
 import { PermissionCheckResult, PermissionsSnapshot, PermissionState } from '../types';
 
 export async function checkMicrophonePermission(): Promise<PermissionCheckResult> {
   try {
+    // Dynamically require to prevent native module crashes in host environments like Expo Go
+    const { Audio } = require('expo-av');
+    if (!Audio?.getPermissionsAsync) {
+      return { granted: false, canAskAgain: true, status: 'undetermined' };
+    }
     const response = await Audio.getPermissionsAsync();
     let status: PermissionState = 'undetermined';
 
@@ -21,8 +24,8 @@ export async function checkMicrophonePermission(): Promise<PermissionCheckResult
       canAskAgain: response.canAskAgain,
       status,
     };
-  } catch (error) {
-    console.error('[Permissions] Error checking microphone permission:', error);
+  } catch {
+    // Native ExponentAV not available in current host (e.g. Expo Go)
     return {
       granted: false,
       canAskAgain: true,
@@ -33,6 +36,10 @@ export async function checkMicrophonePermission(): Promise<PermissionCheckResult
 
 export async function requestMicrophonePermission(): Promise<PermissionCheckResult> {
   try {
+    const { Audio } = require('expo-av');
+    if (!Audio?.requestPermissionsAsync) {
+      return { granted: false, canAskAgain: false, status: 'denied' };
+    }
     const response = await Audio.requestPermissionsAsync();
     let status: PermissionState = 'undetermined';
 
@@ -49,8 +56,7 @@ export async function requestMicrophonePermission(): Promise<PermissionCheckResu
       canAskAgain: response.canAskAgain,
       status,
     };
-  } catch (error) {
-    console.error('[Permissions] Error requesting microphone permission:', error);
+  } catch {
     return {
       granted: false,
       canAskAgain: false,
@@ -61,7 +67,9 @@ export async function requestMicrophonePermission(): Promise<PermissionCheckResu
 
 export async function checkCameraPermission(): Promise<PermissionCheckResult> {
   try {
-    const statusRaw: PermissionStatus = VisionCamera.cameraPermissionStatus;
+    // Dynamically require to prevent native module crashes in host environments like Expo Go
+    const { VisionCamera } = require('react-native-vision-camera');
+    const statusRaw = VisionCamera?.cameraPermissionStatus;
     const granted = statusRaw === 'authorized';
     let status: PermissionState = 'undetermined';
 
@@ -80,8 +88,8 @@ export async function checkCameraPermission(): Promise<PermissionCheckResult> {
       canAskAgain: statusRaw === 'not-determined',
       status,
     };
-  } catch (error) {
-    console.error('[Permissions] Error checking camera permission:', error);
+  } catch {
+    // Native VisionCamera not available in current host (e.g. Expo Go)
     return {
       granted: false,
       canAskAgain: true,
@@ -92,8 +100,12 @@ export async function checkCameraPermission(): Promise<PermissionCheckResult> {
 
 export async function requestCameraPermission(): Promise<PermissionCheckResult> {
   try {
+    const { VisionCamera } = require('react-native-vision-camera');
+    if (!VisionCamera?.requestCameraPermission) {
+      return { granted: false, canAskAgain: false, status: 'denied' };
+    }
     const granted: boolean = await VisionCamera.requestCameraPermission();
-    const statusRaw: PermissionStatus = VisionCamera.cameraPermissionStatus;
+    const statusRaw = VisionCamera?.cameraPermissionStatus;
     let status: PermissionState = 'undetermined';
 
     if (granted || statusRaw === 'authorized') {
@@ -109,8 +121,7 @@ export async function requestCameraPermission(): Promise<PermissionCheckResult> 
       canAskAgain: statusRaw === 'not-determined',
       status,
     };
-  } catch (error) {
-    console.error('[Permissions] Error requesting camera permission:', error);
+  } catch {
     return {
       granted: false,
       canAskAgain: false,
