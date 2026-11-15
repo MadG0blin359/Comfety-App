@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,10 +9,21 @@ import { THEME } from '../src/constants/theme';
 export default function GuideScreen() {
   const router = useRouter();
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace('/?select=true');
-  };
+  }, [router]);
+
+  // Intercept Android hardware/gesture back press to return to mode selection instead of quitting app
+  useEffect(() => {
+    const onHardwareBack = () => {
+      handleBack();
+      return true; // Prevent default app exit
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => backSubscription.remove();
+  }, [handleBack]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

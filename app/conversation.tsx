@@ -9,6 +9,7 @@ import {
   Keyboard,
   Platform,
   Alert,
+  BackHandler,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -121,12 +122,23 @@ export default function ConversationScreen() {
   // Combined quick replies: Custom phrases first, then defaults
   const allQuickReplies: QuickReplyItem[] = [...customPhrases, ...DEFAULT_QUICK_REPLIES];
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
     stopRecording();
     router.replace('/?select=true');
-  };
+  }, [stopSpeech, stopRecording, router]);
+
+  // Intercept Android hardware/gesture back press to return to mode selection instead of quitting app
+  useEffect(() => {
+    const onHardwareBack = () => {
+      handleBack();
+      return true; // Prevent default app exit
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => backSubscription.remove();
+  }, [handleBack]);
 
   const toggleRecording = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
