@@ -11,38 +11,41 @@ Read the `EXPECTED_USER_FLOW.md` D:\Desktop Folders\Run Codes\Comfety-App\EXPECT
 
 ## 2. Consolidated Free-Tier & On-Device AI Stack (Zero-Backend)
 
-All intelligence runs directly from the mobile client using two free-tier cloud endpoints and two local on-device engines:
+All intelligence runs directly from the mobile client using two free-tier cloud endpoints and two local on-device engines, governed by `src/constants/config.ts`:
 
-1. **Bilingual Speech-to-Text (`src/services/groqStt.ts`):**
-   - **Model:** `whisper-large-v3-turbo` via Groq REST API (`https://api.groq.com/openai/v1/audio/transcriptions`).
+1. **Bilingual Speech-to-Text (`src/services/groqStt.ts` & `src/hooks/useAudioChunker.ts`):**
+   - **Audio Capture Library:** Use **`expo-audio`** (`useAudioRecorder` with `{ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true }`, `useAudioRecorderState`, `AudioModule.requestRecordingPermissionsAsync`, and `setAudioModeAsync`). **Never** import or install `expo-av`.
+   - **Model:** `whisper-large-v3-turbo` (`AI_MODELS.STT_MODEL`) via Groq REST API (`https://api.groq.com/openai/v1/audio/transcriptions`).
    - **Quota Ceiling:** 20 RPM / 2,000 RPD / 7,200 audio seconds per hour.
-   - **Enforcement:** Gate audio uploads via `expo-av` microphone metering (RMS decibel threshold) so silent intervals are discarded locally. Never exceed 1 upload every `4,000ms`. Always pass `prompt: "Urdu and English mixed conversation. السلام علیکم، یہ کتنے کا ہے؟"` in multipart requests to preserve Urdu Nastaliq script and prevent Hindi Devanagari transliteration.
+   - **Enforcement:** Gate audio uploads using `expo-audio` metering levels so silent intervals are discarded locally. Never exceed 1 upload every `4,000ms` (`RATE_LIMITS.GROQ_MIN_INTERVAL_MS`). Always pass `prompt: "Urdu and English mixed conversation. السلام علیکم، یہ کتنے کا ہے؟"` in multipart requests to preserve Urdu Nastaliq script and prevent Hindi Devanagari transliteration.
 
 2. **Natural Text-to-Speech (`src/services/ttsManager.ts`):**
    - **Engine:** On-device `expo-speech` (0 external API calls, unlimited quota).
    - **Enforcement:** Expose at least 6 distinct voice presets mapped to available OS neural voices across English and Urdu locales with distinct pitch and rate parameters.
 
 3. **Vision, OCR, Simplification & Structural Hazards (`src/services/geminiVision.ts`):**
-   - **Primary Model:** `gemini-3.8-flash` (from `AI_MODELS.VISION_PRIMARY_MODEL`) via `@google/genai`.
-   - **Fast Fallback Model:** `gemini-3.5-flash-lite` (from `AI_MODELS.VISION_FAST_FALLBACK_MODEL`). Automatically route 7-second structural hazard checks to `gemini-3.5-flash-lite` if `gemini-3.8-flash` returns `HTTP 429` or approaches RPM limits.
+   - **Primary Model:** `gemini-3.8-flash` (`AI_MODELS.VISION_PRIMARY_MODEL`) via `@google/genai`.
+   - **Fast Fallback Model:** `gemini-3.5-flash-lite` (`AI_MODELS.VISION_FAST_FALLBACK_MODEL`). Automatically route 7-second structural hazard checks to `gemini-3.5-flash-lite` if `gemini-3.8-flash` returns `HTTP 429` or approaches RPM limits.
    - **Dual-Resolution Routing:**
      - _On-Demand Reading & Simplification (`media_resolution: "high"`):_ Triggered exclusively by user gesture or voice command (reading medicine labels, bills, signs, or re-explaining previous responses in simpler words). Retains in-memory multi-turn `Content[]` history.
-     - _Throttled Structural Hazard Check (`media_resolution: "low"`):_ Strictly rate-limited to **at most 1 request every `7,000ms`** (`<= 8.5 RPM`) and active only when `expo-sensors` Accelerometer detects walking motion. Inspects compressed `512x384` JPEG frames specifically for **stairs** and **open drains**.
+     - _Throttled Structural Hazard Check (`media_resolution: "low"`):_ Strictly rate-limited to **at most 1 request every `7,000ms`** (`RATE_LIMITS.GEMINI_HAZARD_INTERVAL_MS`, `<= 8.5 RPM`) and active only when `expo-sensors` Accelerometer detects walking motion. Inspects compressed `512x384` JPEG frames specifically for **stairs** and **open drains**.
    - **Local Context Injection (Replaces Vector RAG):** Load user preferences and saved accessibility context from `AsyncStorage` key `comfety_user_context` and inject them directly into `systemInstruction`.
 
 4. **Real-Time Local Obstacle Detection (`src/hooks/useObstacleLoop.ts`):**
-   - **Engine:** `react-native-fast-tflite` running quantized COCO-trained `efficientdet-lite0` weights (`assets/models/efficientdet-lite0.tflite`) at `>= 10 FPS` with `0` network calls.
-   - **Input & Target Classes:** Resize camera frames via `vision-camera-resize-plugin` to `320x320` RGB (`uint8`). Trigger immediate priority warnings for COCO classes: `person`, `car`, `motorcycle`, `bus`, and `truck`.
+   - **Engine:** `react-native-fast-tflite` running the official Google quantized COCO `efficientdet-lite0` model (`assets/models/efficientdet-lite0.tflite`) at `>= 10 FPS` with `0` network calls.
+   - **Input & Target Classes:** Resize camera frames via `vision-camera-resize-plugin` to `320x320` RGB (`uint8`, `0–255`). Require `>= 0.55` confidence across 2 consecutive frames before triggering immediate priority warnings for COCO classes: `person` (`0`), `bicycle` (`1`), `car` (`2`), `motorcycle` (`3`), `bus` (`5`), and `truck` (`7`).
 
-5. **Explicit Architectural Exclusions:**
+5. **Explicit Architectural & Build Exclusions:**
+   - Do **NOT** install or import `expo-av` (deprecated in Expo SDK 58; throws native JSI `UnsatisfiedLinkError`). Always use `expo-audio` + `expo-asset`.
    - Do **NOT** install or import `langchain`, `@langchain/*`, vector database SDKs, embedding models, or Hugging Face cloud Inference APIs (`api-inference.huggingface.co`).
    - Do **NOT** scaffold a separate Node.js/Express/Python backend server.
+   - Maintain `minSdkVersion: 26` and `buildArchs: ["arm64-v8a"]` in `app.json` via `expo-build-properties`, and register `'tflite'` in `metro.config.js` (`config.resolver.assetExts.push('tflite')`).
 
 ## 3. Gemini 3.8 Flash API Compatibility Rules
 
 When writing code in `src/services/geminiVision.ts`:
 
-- Use the official `@google/genai` TypeScript SDK with model identifier `"gemini-3.8-flash"`.
+- Use the official `@google/genai` TypeScript SDK with model identifiers from `AI_MODELS` (`"gemini-3.8-flash"` and `"gemini-3.5-flash-lite"`).
 - **NEVER** pass deprecated sampling parameters (`temperature`, `top_p`, `top_k`).
 - **NEVER** end a `contents` array with a prefilled `model` turn; the final entry must always have `role: "user"`.
 - Implement exponential backoff retry logic (`2s`, `4s`, `8s`) on `HTTP 429` responses and `AbortController` cancellation on screen blur/unmount.
