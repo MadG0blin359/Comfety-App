@@ -1,14 +1,10 @@
 import { Linking } from 'react-native';
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { PermissionCheckResult, PermissionsSnapshot, PermissionState } from '../types';
 
 export async function checkMicrophonePermission(): Promise<PermissionCheckResult> {
   try {
-    // Dynamically require to prevent native module crashes in host environments like Expo Go
-    const { Audio } = require('expo-av');
-    if (!Audio?.getPermissionsAsync) {
-      return { granted: false, canAskAgain: true, status: 'undetermined' };
-    }
-    const response = await Audio.getPermissionsAsync();
+    const response = await getRecordingPermissionsAsync();
     let status: PermissionState = 'undetermined';
 
     if (response.granted) {
@@ -24,8 +20,8 @@ export async function checkMicrophonePermission(): Promise<PermissionCheckResult
       canAskAgain: response.canAskAgain,
       status,
     };
-  } catch {
-    // Native ExponentAV not available in current host (e.g. Expo Go)
+  } catch (err: unknown) {
+    console.warn('[Permissions] Failed to check microphone permission:', err);
     return {
       granted: false,
       canAskAgain: true,
@@ -36,11 +32,7 @@ export async function checkMicrophonePermission(): Promise<PermissionCheckResult
 
 export async function requestMicrophonePermission(): Promise<PermissionCheckResult> {
   try {
-    const { Audio } = require('expo-av');
-    if (!Audio?.requestPermissionsAsync) {
-      return { granted: false, canAskAgain: false, status: 'denied' };
-    }
-    const response = await Audio.requestPermissionsAsync();
+    const response = await requestRecordingPermissionsAsync();
     let status: PermissionState = 'undetermined';
 
     if (response.granted) {
@@ -56,7 +48,8 @@ export async function requestMicrophonePermission(): Promise<PermissionCheckResu
       canAskAgain: response.canAskAgain,
       status,
     };
-  } catch {
+  } catch (err: unknown) {
+    console.warn('[Permissions] Failed to request microphone permission:', err);
     return {
       granted: false,
       canAskAgain: false,
