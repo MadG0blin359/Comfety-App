@@ -16,6 +16,7 @@ import {
   checkCameraPermission,
   requestCameraPermission,
 } from "../src/utils/permissions";
+import { useShakeGesture } from "../src/hooks/useShakeGesture";
 import { AppMode, PermissionsSnapshot } from "../src/types";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -183,10 +184,10 @@ export default function HomeScreen() {
       Speech.stop();
       const speechTimer = setTimeout(() => {
         Speech.speak(
-          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half or shake the phone for Guide Mode.",
+          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, or shake your phone to start Guide Mode.",
           {
             language: "en",
-            rate: 0.95,
+            rate: 0.80, // Comfortable, normal pace for clear comprehension
             pitch: 1.0,
           },
         );
@@ -199,6 +200,14 @@ export default function HomeScreen() {
       };
     }, [params.select, isCheckingAutoOpen, refreshPermissions]),
   );
+
+  // Hands-Free Blind Entry: Double shake (> 2.1g within 1000ms) launches Guide Mode (especially in preview & production builds)
+  useShakeGesture({
+    enabled: isScreenFocused && !isCheckingAutoOpen,
+    onShake: () => {
+      navigateToMode("guide");
+    },
+  });
 
   const handlePressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -437,11 +446,10 @@ export default function HomeScreen() {
             </View>
             <View style={styles.footerTextContainer}>
               <Text style={styles.footerTitle}>
-                Spoken Guidance & Direct Mode Touch
+                Spoken Guidance & Hands-Free Entry
               </Text>
               <Text style={styles.footerSubtitle}>
-                Speaks automatically • Tap top for Conversation, bottom for
-                Guide
+                Speaks on open • Tap cards or shake phone for Guide Mode
               </Text>
             </View>
           </LinearGradient>
