@@ -96,15 +96,33 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          animation: 'fade',
+          animation: 'slide_from_right',
+          animationDuration: 280,
           contentStyle: {
             backgroundColor: THEME.colors.background,
           },
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="conversation" />
-        <Stack.Screen name="guide" />
+        <Stack.Screen
+          name="index"
+          options={{
+            animation: 'fade',
+          }}
+        />
+        <Stack.Screen
+          name="conversation"
+          options={{
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        />
+        <Stack.Screen
+          name="guide"
+          options={{
+            animation: 'slide_from_bottom',
+            animationDuration: 320,
+          }}
+        />
       </Stack>
 
       {/* Silky Animated Splash Screen Overlay */}
