@@ -50,13 +50,6 @@ export const STORAGE_KEYS = {
   USER_CONTEXT: 'comfety_user_context',
   SAVED_PHRASES: 'comfety_saved_phrases',
   SELECTED_VOICE: 'comfety_selected_voice',
-  STT_LANGUAGE: 'comfety_stt_language',
-} as const;
-
-export const STT_PROMPTS = {
-  ur: 'السلام علیکم، کیا حال ہے؟ میں ٹھیک ہوں۔ آپ کیسے ہیں؟ جی ہاں، شکریہ۔ یہ کتنے کا ہے؟',
-  en: 'Hello, how are you? I am fine. Yes, thank you very much.',
-  auto: 'السلام علیکم، کیا حال ہے؟ Hello, how are you? میں ٹھیک ہوں۔ Everything is fine. شکریہ۔',
 } as const;
 
 export const APP_CONFIG: AppConfig = {
@@ -64,7 +57,7 @@ export const APP_CONFIG: AppConfig = {
     apiKey: ENV_CONFIG.GROQ_API_KEY,
     model: AI_MODELS.STT_MODEL,
     endpoint: 'https://api.groq.com/openai/v1/audio/transcriptions',
-    prompt: 'Urdu and English mixed conversation. السلام علیکم، یہ کتنے کا ہے؟',
+    prompt: 'Conversations in Pakistan: Urdu, English, Punjabi, Pashto, Saraiki. السلام علیکم، کیا حال ہے؟ How are you?',
     rateLimit: {
       minIntervalMs: RATE_LIMITS.GROQ_MIN_INTERVAL_MS,
       maxRpm: 20,

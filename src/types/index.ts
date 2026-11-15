@@ -78,8 +78,6 @@ export interface TranscriptItem {
   isUrdu?: boolean;
 }
 
-export type SttLanguageMode = 'ur' | 'en' | 'auto';
-
 export interface TranscriptionResult {
   text: string;
   duration?: number;
