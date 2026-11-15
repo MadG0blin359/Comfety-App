@@ -36,6 +36,7 @@ import {
 import { CounterDisplayModal } from '../src/components/CounterDisplayModal';
 import { VoiceSelectorModal } from '../src/components/VoiceSelectorModal';
 import { SavePhraseModal } from '../src/components/SavePhraseModal';
+import { LanguageSelectorModal } from '../src/components/LanguageSelectorModal';
 
 export default function ConversationScreen() {
   const router = useRouter();
@@ -48,6 +49,8 @@ export default function ConversationScreen() {
     currentDb,
     transcripts,
     error,
+    languageMode,
+    setLanguageMode,
     startRecording,
     stopRecording,
     pauseForTts,
@@ -68,6 +71,7 @@ export default function ConversationScreen() {
   const [counterModalText, setCounterModalText] = useState<string>('');
   const [voiceModalVisible, setVoiceModalVisible] = useState<boolean>(false);
   const [savePhraseModalVisible, setSavePhraseModalVisible] = useState<boolean>(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState<boolean>(false);
 
   // Dynamic keyboard tracking for fail-safe Android and iOS input positioning
   useEffect(() => {
@@ -269,7 +273,7 @@ export default function ConversationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Clean Uncluttered Header: Title on Left/Center, Single Voice Pill on Right */}
+      {/* Clean Header: Title on Left, Language & Voice Controls on Right */}
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
@@ -287,27 +291,53 @@ export default function ConversationScreen() {
             Conversation
           </Text>
           <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
-            Live Bilingual Speech
+            {languageMode === 'ur'
+              ? 'Urdu Only • No Hindi'
+              : languageMode === 'en'
+              ? 'English Only'
+              : 'Auto Bilingual'}
           </Text>
         </View>
 
-        {/* Single Voice Selector Pill (Clean, Spacious & Highly Visible) */}
-        <Pressable
-          style={styles.voiceSelectorPill}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setVoiceModalVisible(true);
-          }}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={`Voice: ${currentVoice.name}. Tap to change speaking voice.`}
-        >
-          <Ionicons name="mic-circle" size={20} color={THEME.colors.conversationAccent} />
-          <Text style={styles.voiceSelectorText} numberOfLines={1}>
-            {currentVoice.name}
-          </Text>
-          <Ionicons name="chevron-down" size={14} color={THEME.colors.textSecondary} />
-        </Pressable>
+        <View style={styles.headerRightControls}>
+          {/* Language Mode Selector Pill */}
+          <Pressable
+            style={styles.languageSelectorPill}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setLanguageModalVisible(true);
+            }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Language: ${
+              languageMode === 'ur' ? 'Urdu' : languageMode === 'en' ? 'English' : 'Auto'
+            }. Tap to change listening language.`}
+          >
+            <Ionicons name="globe-outline" size={15} color={THEME.colors.conversationAccent} />
+            <Text style={styles.languageSelectorText} numberOfLines={1}>
+              {languageMode === 'ur' ? 'اردو' : languageMode === 'en' ? 'EN' : 'Auto'}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={THEME.colors.textSecondary} />
+          </Pressable>
+
+          {/* Voice Selector Pill */}
+          <Pressable
+            style={styles.voiceSelectorPill}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setVoiceModalVisible(true);
+            }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Voice: ${currentVoice.name}. Tap to change speaking voice.`}
+          >
+            <Ionicons name="volume-medium" size={16} color={THEME.colors.conversationAccent} />
+            <Text style={styles.voiceSelectorText} numberOfLines={1}>
+              {currentVoice.name}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={THEME.colors.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Unified Acoustic & Audio State Bar (Status + RMS Visualizer + dB Readout) */}
@@ -691,6 +721,13 @@ export default function ConversationScreen() {
         onSave={handleSaveCustomPhrase}
         onClose={() => setSavePhraseModalVisible(false)}
       />
+
+      <LanguageSelectorModal
+        visible={languageModalVisible}
+        selectedLanguage={languageMode}
+        onSelectLanguage={setLanguageMode}
+        onClose={() => setLanguageModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -729,25 +766,49 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   headerSubtitle: {
-    color: THEME.colors.textSecondary,
-    fontSize: 12,
+    color: THEME.colors.conversationAccent,
+    fontSize: 11,
+    fontWeight: '600',
     marginTop: 1,
   },
-  voiceSelectorPill: {
+  headerRightControls: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
+  },
+  languageSelectorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
     borderRadius: THEME.borderRadius.full,
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.3)',
     flexShrink: 0,
   },
+  languageSelectorText: {
+    color: THEME.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  voiceSelectorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: THEME.borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    flexShrink: 0,
+  },
   voiceSelectorText: {
     color: THEME.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   meterContainer: {

@@ -1,5 +1,5 @@
-import { APP_CONFIG, RATE_LIMITS, ENV_CONFIG } from '../constants/config';
-import { TranscriptionResult } from '../types';
+import { APP_CONFIG, RATE_LIMITS, ENV_CONFIG, STT_PROMPTS } from '../constants/config';
+import { TranscriptionResult, SttLanguageMode } from '../types';
 
 let lastGroqRequestTimestamp = 0;
 
@@ -77,6 +77,7 @@ async function enforceRateLimitInterval(): Promise<void> {
 
 export interface TranscribeOptions {
   signal?: AbortSignal;
+  language?: SttLanguageMode;
 }
 
 export interface WhisperSegment {
@@ -111,6 +112,10 @@ export const HALLUCINATION_BLOCKLIST = new Set<string>([
   'السلام علیکم',
   'یہ کتنے کا ہے؟',
   'اوٹھ با ملوم سلام علیکم',
+  'नमस्ते',
+  'धन्यवाद',
+  'सब्सक्राइब',
+  'संगीत',
 ]);
 
 /**
@@ -150,7 +155,7 @@ export async function transcribeAudio(
   }
 
   // Helper to build fresh FormData instance with byte-streamable part for each attempt
-  const buildFormData = (): FormData => {
+  const buildFormData = (forcedLang?: string, customPrompt?: string): FormData => {
     const formData = new FormData();
     const audioPart = {
       name: 'audio.m4a',
@@ -160,7 +165,23 @@ export async function transcribeAudio(
 
     formData.append('file', audioPart as unknown as Blob);
     formData.append('model', APP_CONFIG.groq.model);
-    formData.append('prompt', APP_CONFIG.groq.prompt);
+
+    // Determine target language:
+    // If options.language is specified and not 'auto', enforce it directly.
+    const targetLang = forcedLang ?? (options?.language && options.language !== 'auto' ? options.language : undefined);
+    if (targetLang) {
+      formData.append('language', targetLang);
+    }
+
+    const prompt = customPrompt ?? (
+      targetLang === 'ur'
+        ? STT_PROMPTS.ur
+        : targetLang === 'en'
+        ? STT_PROMPTS.en
+        : STT_PROMPTS.auto
+    );
+    formData.append('prompt', prompt);
+
     formData.append('response_format', 'verbose_json');
     formData.append('temperature', '0.0');
     return formData;
@@ -202,7 +223,45 @@ export async function transcribeAudio(
       }
 
       const json = (await response.json()) as GroqVerboseResponse;
-      const rawText = json.text?.trim() ?? '';
+      let rawText = json.text?.trim() ?? '';
+      let detectedLang = json.language?.toLowerCase() ?? '';
+
+      // Check if Whisper detected Hindi or generated Devanagari characters (\u0900-\u097F)
+      const hasDevanagari = /[\u0900-\u097F]/.test(rawText);
+      const isHindi = detectedLang === 'hi' || detectedLang === 'hindi' || hasDevanagari;
+
+      // Spoken Urdu is often misidentified as Hindi by Whisper because of shared Hindustani phonology.
+      // If Hindi or Devanagari is returned and we are not in strict English mode, immediately re-transcribe as Urdu!
+      if (isHindi && options?.language !== 'en') {
+        console.log('[GroqSTT] Hindi/Devanagari detected from spoken Urdu. Re-transcribing strictly as Urdu (ur)...');
+        try {
+          const retryRes = await fetch(APP_CONFIG.groq.endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${ENV_CONFIG.GROQ_API_KEY}`,
+            },
+            body: buildFormData('ur', STT_PROMPTS.ur),
+            signal: options?.signal,
+          });
+
+          if (retryRes.ok) {
+            const retryJson = (await retryRes.json()) as GroqVerboseResponse;
+            if (retryJson.text?.trim()) {
+              rawText = retryJson.text.trim();
+              detectedLang = retryJson.language?.toLowerCase() ?? 'urdu';
+              json.segments = retryJson.segments;
+              json.duration = retryJson.duration ?? json.duration;
+            }
+          }
+        } catch (retryErr) {
+          console.warn('[GroqSTT] Re-transcribe retry failed:', retryErr);
+        }
+      }
+
+      // Hard block on Devanagari: Strip any lingering Hindi script characters
+      if (/[\u0900-\u097F]/.test(rawText)) {
+        rawText = rawText.replace(/[\u0900-\u097F]+/g, '').trim();
+      }
 
       // Layer 2 Safeguard: Discard chunk if Whisper's internal confidence flags it as silence
       if (json.segments && json.segments.length > 0) {

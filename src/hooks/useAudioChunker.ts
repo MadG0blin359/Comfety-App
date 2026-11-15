@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -6,9 +7,9 @@ import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
 } from 'expo-audio';
-import { AUDIO_METERING_CONFIG } from '../constants/config';
+import { AUDIO_METERING_CONFIG, STORAGE_KEYS } from '../constants/config';
 import { transcribeAudio, isUrduScript, isAbortOrCancelError, isWhisperHallucination } from '../services/groqStt';
-import { TranscriptItem } from '../types';
+import { TranscriptItem, SttLanguageMode } from '../types';
 
 interface UseAudioChunkerOptions {
   enabled?: boolean;
@@ -21,6 +22,8 @@ interface UseAudioChunkerReturn {
   currentDb: number;  // raw dB from -60 to 0
   transcripts: TranscriptItem[];
   error: string | null;
+  languageMode: SttLanguageMode;
+  setLanguageMode: (mode: SttLanguageMode) => void;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   pauseForTts: () => void;
@@ -36,6 +39,8 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const [currentDb, setCurrentDb] = useState<number>(-60);
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [languageMode, setLanguageModeState] = useState<SttLanguageMode>('ur');
+  const languageModeRef = useRef<SttLanguageMode>('ur');
 
   const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDbInChunkRef = useRef<number>(-100);
@@ -43,6 +48,26 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const isPausedForTtsRef = useRef<boolean>(false);
   const isLoopRunningRef = useRef<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load persisted language mode on mount (default to 'ur' for Pakistan accessibility)
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEYS.STT_LANGUAGE)
+      .then((saved) => {
+        if (saved === 'ur' || saved === 'en' || saved === 'auto') {
+          setLanguageModeState(saved);
+          languageModeRef.current = saved;
+        }
+      })
+      .catch((err) => console.warn('[AudioChunker] Failed to load stt language:', err));
+  }, []);
+
+  const setLanguageMode = useCallback((mode: SttLanguageMode) => {
+    setLanguageModeState(mode);
+    languageModeRef.current = mode;
+    AsyncStorage.setItem(STORAGE_KEYS.STT_LANGUAGE, mode).catch((err) =>
+      console.warn('[AudioChunker] Failed to persist stt language:', err)
+    );
+  }, []);
 
   const MIN_SPEECH_FRAMES = 4; // At least 4 polls (400ms of active speech > -35dB) required to discard transient clicks/rustles
 
@@ -120,7 +145,10 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      const result = await transcribeAudio(chunkUri, { signal: controller.signal });
+      const result = await transcribeAudio(chunkUri, {
+        signal: controller.signal,
+        language: languageModeRef.current,
+      });
       const trimmedText = result.text.trim();
 
       // Filter out empty results and Whisper hallucinations on silence / brief noise
@@ -297,6 +325,8 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
     currentDb,
     transcripts,
     error,
+    languageMode,
+    setLanguageMode,
     startRecording,
     stopRecording,
     pauseForTts,
