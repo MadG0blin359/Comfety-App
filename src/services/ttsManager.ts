@@ -9,61 +9,61 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: 'ur-fatima',
     name: 'Fatima',
     language: 'ur',
-    pitch: 1.18,
+    pitch: 1.02,
     rate: 0.95,
     gender: 'female',
-    regionLabel: 'Urdu (Warm Female)',
+    regionLabel: 'Urdu (ur-PK Natural)',
     samplePhrase: 'السلام علیکم، میں آپ کی کیا مدد کر سکتی ہوں؟',
   },
   {
-    id: 'ur-tariq',
-    name: 'Tariq',
+    id: 'ur-zara',
+    name: 'Zara',
     language: 'ur',
-    pitch: 0.58,
-    rate: 0.88,
-    gender: 'male',
-    regionLabel: 'Urdu (Deep Male)',
-    samplePhrase: 'السلام علیکم، میں آپ کا معاون ہوں۔',
+    pitch: 0.95,
+    rate: 0.90,
+    gender: 'female',
+    regionLabel: 'Urdu (ur-PK Deep & Slow)',
+    samplePhrase: 'السلام علیکم، میں آپ کی کیا مدد کر سکتی ہوں؟',
   },
   {
-    id: 'en-sarah',
-    name: 'Sarah',
+    id: 'en-in-tariq',
+    name: 'Tariq',
     language: 'en',
-    pitch: 1.15,
-    rate: 0.95,
-    gender: 'female',
-    regionLabel: 'English (US Clear)',
-    samplePhrase: 'Hello, how can I help you today?',
+    pitch: 0.96,
+    rate: 0.94,
+    gender: 'male',
+    regionLabel: 'South Asian (en-IN Male)',
+    samplePhrase: 'Hello, I am ready to assist you. میں آپ کی مدد کے لیے تیار ہوں۔',
   },
   {
     id: 'en-david',
     name: 'David',
     language: 'en',
-    pitch: 0.55,
-    rate: 0.88,
+    pitch: 0.96,
+    rate: 0.96,
     gender: 'male',
-    regionLabel: 'English (US Deep)',
+    regionLabel: 'English (US Male)',
     samplePhrase: 'Hello, I am ready to assist you.',
-  },
-  {
-    id: 'en-emma',
-    name: 'Emma',
-    language: 'en',
-    pitch: 1.10,
-    rate: 1.00,
-    gender: 'female',
-    regionLabel: 'English (UK Friendly)',
-    samplePhrase: 'Good day! Lovely to meet you.',
   },
   {
     id: 'en-oliver',
     name: 'Oliver',
     language: 'en',
-    pitch: 0.60,
-    rate: 0.88,
+    pitch: 0.98,
+    rate: 0.95,
     gender: 'male',
-    regionLabel: 'English (UK Warm)',
+    regionLabel: 'English (UK Male)',
     samplePhrase: 'Hello there, hope you are having a pleasant day.',
+  },
+  {
+    id: 'en-sarah',
+    name: 'Sarah',
+    language: 'en',
+    pitch: 1.04,
+    rate: 0.98,
+    gender: 'female',
+    regionLabel: 'English (US Female)',
+    samplePhrase: 'Hello, how can I help you today?',
   },
 ] as const;
 
@@ -125,30 +125,115 @@ export interface SpeakOptions {
 }
 
 /**
- * Synchronous voice matching from pre-cached system voices. Zero IPC overhead.
+ * Synchronous voice matching for verified neural identifiers without pitch distortion.
+ * - tpd, iom for en-US male
+ * - rjs, gbb, gbd for en-GB male
+ * - end, ene for en-IN male
+ * - sfg, tpf for en-US female
+ * - cfc for ur-PK female
+ * Note: 'iob' is excluded as it is a female Google TTS voice.
  */
-function findMatchingVoiceIdentifier(targetLang: string, targetGender: 'female' | 'male'): string | undefined {
+function findMatchingVoiceIdentifier(
+  preset: TtsVoicePreset,
+  targetLang: string
+): string | undefined {
   if (!cachedVoices || cachedVoices.length === 0) return undefined;
 
+  // 1. Preset-specific verified neural identifier match
+  if (preset.id === 'en-in-tariq' || preset.name === 'Tariq') {
+    const match = cachedVoices.find((v) => {
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      const isIndian =
+        lower.includes('en-in') || lower.includes('en_in') || v.language.toLowerCase().includes('in');
+      return isIndian && (lower.includes('end') || lower.includes('ene') || lower.includes('male'));
+    });
+    if (match) return match.identifier;
+  }
+
+  if (preset.id === 'en-david' || preset.name === 'David') {
+    const match = cachedVoices.find((v) => {
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      return (
+        (lower.includes('tpd') || lower.includes('iom') || lower.includes('david')) &&
+        !lower.includes('iob')
+      );
+    });
+    if (match) return match.identifier;
+  }
+
+  if (preset.id === 'en-oliver' || preset.name === 'Oliver') {
+    const match = cachedVoices.find((v) => {
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      return (
+        lower.includes('rjs') ||
+        lower.includes('gbb') ||
+        lower.includes('gbd') ||
+        lower.includes('oliver')
+      );
+    });
+    if (match) return match.identifier;
+  }
+
+  if (preset.id === 'en-sarah' || preset.name === 'Sarah') {
+    const match = cachedVoices.find((v) => {
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      return lower.includes('sfg') || lower.includes('tpf') || lower.includes('sarah');
+    });
+    if (match) return match.identifier;
+  }
+
+  if (preset.id === 'ur-fatima' || preset.id === 'ur-zara' || targetLang === 'ur') {
+    const match = cachedVoices.find((v) => {
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      return lower.includes('cfc') || lower.includes('ur-pk') || lower.includes('ur_pk');
+    });
+    if (match) return match.identifier;
+  }
+
+  // 2. Language-filtered fallback with verified male/female tokens
   const langMatches = cachedVoices.filter((v) =>
     v.language.toLowerCase().startsWith(targetLang.toLowerCase())
   );
 
   if (langMatches.length === 0) return undefined;
 
-  const maleKeywords = ['male', 'man', 'boy', 'david', 'daniel', 'george', 'oliver', 'tariq', 'tpd', 'iom', 'iob', 'rjs'];
-  const femaleKeywords = ['female', 'woman', 'girl', 'lady', 'fatima', 'samantha', 'sarah', 'zira', 'sfg', 'fis', 'cfc'];
+  // Verified male tokens (strictly excluding 'iob')
+  const maleKeywords = [
+    'tpd',
+    'iom',
+    'rjs',
+    'gbb',
+    'gbd',
+    'end',
+    'ene',
+    'male',
+    'david',
+    'daniel',
+    'george',
+    'oliver',
+  ];
+  const femaleKeywords = [
+    'sfg',
+    'tpf',
+    'cfc',
+    'iob',
+    'female',
+    'woman',
+    'sarah',
+    'fatima',
+    'samantha',
+    'zira',
+  ];
 
-  if (targetGender === 'male') {
+  if (preset.gender === 'male') {
     const maleMatch = langMatches.find((v) => {
-      const lower = (v.name + ' ' + v.identifier).toLowerCase();
-      return maleKeywords.some((kw) => lower.includes(kw));
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
+      return maleKeywords.some((kw) => lower.includes(kw)) && !lower.includes('iob');
     });
-    // Return male voice identifier if available; otherwise return undefined so engine doesn't lock to female default
     return maleMatch?.identifier;
   } else {
     const femaleMatch = langMatches.find((v) => {
-      const lower = (v.name + ' ' + v.identifier).toLowerCase();
+      const lower = (v.identifier + ' ' + v.name).toLowerCase();
       return femaleKeywords.some((kw) => lower.includes(kw));
     });
     return (femaleMatch ?? langMatches[0]).identifier;
@@ -157,7 +242,7 @@ function findMatchingVoiceIdentifier(targetLang: string, targetGender: 'female' 
 
 /**
  * Speaks text using on-device expo-speech with zero perceived delay,
- * automatic Urdu/English script routing, and echo-prevention lifecycle callbacks.
+ * natural pitch values (strictly 0.94 - 1.06), and automatic script routing.
  */
 export function speakText(text: string, options: SpeakOptions = {}): void {
   const trimmed = text.trim();
@@ -174,16 +259,18 @@ export function speakText(text: string, options: SpeakOptions = {}): void {
 
   let targetPreset = selectedPreset;
 
-  // If text is Urdu script but user chose an English preset, map to the corresponding gender-matched Urdu preset
+  // If text is pure Urdu script but user chose an English preset:
+  // Route to Zara (deeper, slower Urdu) for male presets, or Fatima for female presets
   if (isUrdu && selectedPreset.language !== 'ur') {
-    const matchingUrdu = TTS_VOICE_PRESETS.find(
-      (v) => v.language === 'ur' && v.gender === selectedPreset.gender
-    ) ?? TTS_VOICE_PRESETS[0];
+    const matchingUrdu =
+      selectedPreset.gender === 'male'
+        ? TTS_VOICE_PRESETS.find((v) => v.id === 'ur-zara') ?? TTS_VOICE_PRESETS[0]
+        : TTS_VOICE_PRESETS.find((v) => v.id === 'ur-fatima') ?? TTS_VOICE_PRESETS[0];
     targetPreset = matchingUrdu;
   }
 
   // Fast synchronous voice match from cached voices
-  const matchedVoice = findMatchingVoiceIdentifier(targetPreset.language, targetPreset.gender);
+  const matchedVoice = findMatchingVoiceIdentifier(targetPreset, targetPreset.language);
 
   // Trigger onStart before speech begins (invoking echo-gating pause on microphone)
   options.onStart?.();
