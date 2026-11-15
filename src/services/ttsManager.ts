@@ -72,7 +72,7 @@ export const DEFAULT_VOICE_ID = 'ur-fatima';
 let cachedVoices: Speech.Voice[] | null = null;
 
 /**
- * Retrieves and caches the native speech synthesis voices available on the device.
+ * Pre-warms and caches available native voices in background so speakText never blocks on IPC.
  */
 export async function getAvailableNativeVoices(): Promise<Speech.Voice[]> {
   if (cachedVoices && cachedVoices.length > 0) {
@@ -87,6 +87,9 @@ export async function getAvailableNativeVoices(): Promise<Speech.Voice[]> {
     return [];
   }
 }
+
+// Background pre-fetch on module evaluation
+getAvailableNativeVoices().catch(() => {});
 
 /**
  * Loads the user's persisted voice preference from AsyncStorage.
@@ -122,20 +125,35 @@ export interface SpeakOptions {
 }
 
 /**
- * Speaks text using on-device expo-speech with automatic Urdu/English script routing,
- * distinct pitch/rate spread, and echo-prevention lifecycle callbacks.
+ * Synchronous voice matching from pre-cached system voices. Zero IPC overhead.
  */
-export async function speakText(text: string, options: SpeakOptions = {}): Promise<void> {
+function findMatchingVoiceIdentifier(targetLang: string, targetGender: 'female' | 'male'): string | undefined {
+  if (!cachedVoices || cachedVoices.length === 0) return undefined;
+
+  const langMatches = cachedVoices.filter((v) =>
+    v.language.toLowerCase().startsWith(targetLang.toLowerCase())
+  );
+
+  if (langMatches.length === 0) return undefined;
+
+  const genderMatch = langMatches.find((v) =>
+    v.name.toLowerCase().includes(targetGender) ||
+    v.identifier.toLowerCase().includes(targetGender)
+  );
+
+  return (genderMatch ?? langMatches[0]).identifier;
+}
+
+/**
+ * Speaks text using on-device expo-speech with zero perceived delay,
+ * automatic Urdu/English script routing, and echo-prevention lifecycle callbacks.
+ */
+export function speakText(text: string, options: SpeakOptions = {}): void {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  // Stop any active speech first and wait 60ms for native audio session release
-  try {
-    await Speech.stop();
-    await new Promise((resolve) => setTimeout(resolve, 60));
-  } catch (stopErr) {
-    console.warn('[TTSManager] Error stopping previous speech:', stopErr);
-  }
+  // Stop any active utterance without blocking
+  Speech.stop().catch(() => {});
 
   const isUrdu = isUrduScript(trimmed);
 
@@ -153,38 +171,18 @@ export async function speakText(text: string, options: SpeakOptions = {}): Promi
     targetPreset = matchingUrdu;
   }
 
-  // Determine native voice identifier if available on device
-  let matchedVoiceIdentifier: string | undefined;
-  try {
-    const available = await getAvailableNativeVoices();
-    if (available && available.length > 0) {
-      // Find voices matching the target language code
-      const langMatches = available.filter((v) =>
-        v.language.toLowerCase().startsWith(targetPreset.language.toLowerCase())
-      );
-
-      if (langMatches.length > 0) {
-        // Look for gender hints in voice name or identifier
-        const genderMatch = langMatches.find((v) =>
-          v.name.toLowerCase().includes(targetPreset.gender) ||
-          v.identifier.toLowerCase().includes(targetPreset.gender)
-        );
-        matchedVoiceIdentifier = (genderMatch ?? langMatches[0]).identifier;
-      }
-    }
-  } catch (voiceErr) {
-    console.warn('[TTSManager] Error matching native voice:', voiceErr);
-  }
+  // Fast synchronous voice match from cached voices
+  const matchedVoice = findMatchingVoiceIdentifier(targetPreset.language, targetPreset.gender);
 
   // Trigger onStart before speech begins (invoking echo-gating pause on microphone)
   options.onStart?.();
 
   try {
     Speech.speak(trimmed, {
-      language: targetPreset.language, // 'ur' or 'en' (never hyphenated to avoid Android IllformedLocaleException)
+      language: targetPreset.language, // 'ur' or 'en'
       pitch: targetPreset.pitch,
       rate: targetPreset.rate,
-      voice: matchedVoiceIdentifier,
+      voice: matchedVoice,
       onDone: () => {
         options.onDone?.();
       },

@@ -6,7 +6,7 @@ import {
   Pressable,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Alert,
 } from 'react-native';
@@ -59,12 +59,35 @@ export default function ConversationScreen() {
   const [customPhrases, setCustomPhrases] = useState<QuickReplyItem[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+  const [keyboardHeight, setKeyboardHeight] = useState<number>(0);
 
   // Modal visibility states
   const [counterModalVisible, setCounterModalVisible] = useState<boolean>(false);
   const [counterModalText, setCounterModalText] = useState<string>('');
   const [voiceModalVisible, setVoiceModalVisible] = useState<boolean>(false);
   const [savePhraseModalVisible, setSavePhraseModalVisible] = useState<boolean>(false);
+
+  // Dynamic keyboard tracking for fail-safe Android and iOS input positioning
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Load persisted voice & custom phrases on mount
   useEffect(() => {
@@ -121,10 +144,10 @@ export default function ConversationScreen() {
 
   /**
    * Vocalizes text via on-device expo-speech in the current selected voice
-   * with automatic echo prevention. Pauses useAudioChunker before speech and resumes 300ms post-completion.
+   * with zero latency and automatic echo prevention.
    */
   const handleSpeakAloud = useCallback(
-    async (textToSpeak: string, logAsUserBubble = false) => {
+    (textToSpeak: string, logAsUserBubble = false) => {
       const trimmed = textToSpeak.trim();
       if (!trimmed) return;
 
@@ -134,7 +157,7 @@ export default function ConversationScreen() {
         addUserReply(trimmed);
       }
 
-      await speakText(trimmed, {
+      speakText(trimmed, {
         voiceId: selectedVoiceId,
         onStart: () => {
           pauseForTts();
@@ -154,7 +177,7 @@ export default function ConversationScreen() {
   );
 
   /**
-   * Handles quick reply chip tap: immediate vocalization in current selected voice + transcript logging.
+   * Handles quick reply chip tap: instant zero-delay vocalization in current voice + transcript logging.
    */
   const handleQuickReplyPress = (reply: QuickReplyItem) => {
     handleSpeakAloud(reply.spokenText, true);
@@ -228,6 +251,8 @@ export default function ConversationScreen() {
     const updated = await addCustomPhrase(phraseText);
     setCustomPhrases(updated);
   };
+
+  const isKeyboardOpen = keyboardHeight > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -356,10 +381,14 @@ export default function ConversationScreen() {
         </View>
       )}
 
-      {/* Main Interactive Screen Area Wrapped in KeyboardAvoidingView */}
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      {/* Main Interactive Screen Area with Dynamic Keyboard Height Padding */}
+      <View
+        style={[
+          styles.contentWrapper,
+          {
+            paddingBottom: isKeyboardOpen ? keyboardHeight : 0,
+          },
+        ]}
       >
         {/* Transcript Scroll Area */}
         <ScrollView
@@ -444,59 +473,61 @@ export default function ConversationScreen() {
           )}
         </ScrollView>
 
-        {/* Quick-Reply Ribbon Tray (Horizontal scrolling chips with + Save Phrase) */}
-        <View style={styles.quickReplyContainer}>
-          <ScrollView
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickReplyScrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* + Save Phrase Trigger Chip */}
-            <Pressable
-              style={styles.addPhraseChip}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSavePhraseModalVisible(true);
-              }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="Add custom phrase"
+        {/* Quick-Reply Ribbon Tray (Collapsed when keyboard is open to maximize typing space) */}
+        {!isKeyboardOpen && (
+          <View style={styles.quickReplyContainer}>
+            <ScrollView
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickReplyScrollContent}
+              keyboardShouldPersistTaps="handled"
             >
-              <Ionicons name="add" size={18} color={THEME.colors.conversationAccent} />
-              <Text style={styles.addPhraseText}>+ Save Phrase</Text>
-            </Pressable>
-
-            {/* Quick-Reply Chips */}
-            {allQuickReplies.map((reply) => (
+              {/* + Save Phrase Trigger Chip */}
               <Pressable
-                key={reply.id}
-                style={[
-                  styles.replyChip,
-                  reply.isCustom && styles.customReplyChip,
-                ]}
-                onPress={() => handleQuickReplyPress(reply)}
-                onLongPress={() => handleQuickReplyLongPress(reply)}
+                style={styles.addPhraseChip}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSavePhraseModalVisible(true);
+                }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={`Quick reply: ${reply.spokenText}`}
-                accessibilityHint={reply.isCustom ? 'Long press to delete' : 'Tap to speak aloud in current voice'}
+                accessibilityLabel="Add custom phrase"
               >
-                <Text style={styles.replyChipUrdu} numberOfLines={1}>
-                  {reply.labelUr}
-                </Text>
-                {reply.labelEn !== reply.labelUr && (
-                  <Text style={styles.replyChipEn} numberOfLines={1}>
-                    {reply.labelEn}
-                  </Text>
-                )}
+                <Ionicons name="add" size={18} color={THEME.colors.conversationAccent} />
+                <Text style={styles.addPhraseText}>+ Save Phrase</Text>
               </Pressable>
-            ))}
-          </ScrollView>
-        </View>
 
-        {/* Bottom Typed Input Bar: Stays Visible Above Keyboard */}
-        <View style={styles.inputBar}>
+              {/* Quick-Reply Chips */}
+              {allQuickReplies.map((reply) => (
+                <Pressable
+                  key={reply.id}
+                  style={[
+                    styles.replyChip,
+                    reply.isCustom && styles.customReplyChip,
+                  ]}
+                  onPress={() => handleQuickReplyPress(reply)}
+                  onLongPress={() => handleQuickReplyLongPress(reply)}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Quick reply: ${reply.spokenText}`}
+                  accessibilityHint={reply.isCustom ? 'Long press to delete' : 'Tap to speak aloud in current voice'}
+                >
+                  <Text style={styles.replyChipUrdu} numberOfLines={1}>
+                    {reply.labelUr}
+                  </Text>
+                  {reply.labelEn !== reply.labelUr && (
+                    <Text style={styles.replyChipEn} numberOfLines={1}>
+                      {reply.labelEn}
+                    </Text>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Bottom Typed Input Bar: Always Sits Directly Above Keyboard */}
+        <View style={[styles.inputBar, isKeyboardOpen && styles.inputBarFocused]}>
           <TextInput
             style={styles.textInput}
             value={inputText}
@@ -523,7 +554,7 @@ export default function ConversationScreen() {
             </Pressable>
           )}
 
-          {/* Speak Button: Vocalizes in Current Selected Voice */}
+          {/* Speak Button: Instant Zero-Delay Vocalization */}
           <Pressable
             style={[
               styles.speakSendButton,
@@ -551,46 +582,48 @@ export default function ConversationScreen() {
           </Pressable>
         </View>
 
-        {/* Bottom Utility Controls Bar */}
-        <View style={styles.bottomBar}>
-          <Pressable
-            style={[
-              styles.controlButton,
-              isRecording ? styles.pauseButton : styles.resumeButton,
-            ]}
-            onPress={toggleRecording}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={isRecording ? 'Pause Live Transcription' : 'Resume Live Transcription'}
-          >
-            <Ionicons
-              name={isRecording ? 'pause' : 'mic'}
-              size={20}
-              color={isRecording ? '#FFFFFF' : '#001E2C'}
-            />
-            <Text
-              style={[
-                styles.controlButtonText,
-                isRecording ? styles.pauseButtonText : styles.resumeButtonText,
-              ]}
-            >
-              {isRecording ? 'Pause Listening' : 'Resume Listening'}
-            </Text>
-          </Pressable>
-
-          {transcripts.length > 0 && (
+        {/* Bottom Utility Controls Bar (Collapsed when typing so input has full screen visibility) */}
+        {!isKeyboardOpen && (
+          <View style={styles.bottomBar}>
             <Pressable
-              style={styles.clearButton}
-              onPress={handleClear}
+              style={[
+                styles.controlButton,
+                isRecording ? styles.pauseButton : styles.resumeButton,
+              ]}
+              onPress={toggleRecording}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Clear transcription history"
+              accessibilityLabel={isRecording ? 'Pause Live Transcription' : 'Resume Live Transcription'}
             >
-              <Ionicons name="trash-outline" size={20} color={THEME.colors.textSecondary} />
+              <Ionicons
+                name={isRecording ? 'pause' : 'mic'}
+                size={20}
+                color={isRecording ? '#FFFFFF' : '#001E2C'}
+              />
+              <Text
+                style={[
+                  styles.controlButtonText,
+                  isRecording ? styles.pauseButtonText : styles.resumeButtonText,
+                ]}
+              >
+                {isRecording ? 'Pause Listening' : 'Resume Listening'}
+              </Text>
             </Pressable>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+
+            {transcripts.length > 0 && (
+              <Pressable
+                style={styles.clearButton}
+                onPress={handleClear}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear transcription history"
+              >
+                <Ionicons name="trash-outline" size={20} color={THEME.colors.textSecondary} />
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
 
       {/* Modals */}
       <CounterDisplayModal
@@ -733,7 +766,7 @@ const styles = StyleSheet.create({
     fontSize: THEME.typography.sizes.caption,
     flex: 1,
   },
-  keyboardContainer: {
+  contentWrapper: {
     flex: 1,
   },
   transcriptScroll: {
@@ -815,7 +848,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: THEME.colors.textPrimary,
-    fontSize: 20, // Min 20px high contrast
+    fontSize: 20,
     lineHeight: 28,
     fontWeight: '500',
   },
@@ -824,7 +857,7 @@ const styles = StyleSheet.create({
   },
   urduText: {
     fontSize: 22,
-    lineHeight: 36, // lineHeight >= fontSize * 1.6 for Nastaliq
+    lineHeight: 36,
     textAlign: 'right',
   },
   messageActionsRow: {
@@ -915,9 +948,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 8,
   },
+  inputBarFocused: {
+    borderTopColor: THEME.colors.conversationAccent,
+    backgroundColor: '#111C35',
+  },
   textInput: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 46,
     backgroundColor: '#131B2E',
     borderRadius: 12,
     paddingHorizontal: 14,
@@ -927,8 +964,8 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   inputActionBtn: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 12,
     backgroundColor: '#1E293B',
     alignItems: 'center',
@@ -941,7 +978,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.conversationAccent,
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 44,
+    height: 46,
     justifyContent: 'center',
   },
   speakSendButtonDisabled: {
