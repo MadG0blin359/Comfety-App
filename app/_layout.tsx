@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Text, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Text, Animated, Easing, Pressable } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -140,7 +140,52 @@ export default function RootLayout() {
   );
 }
 
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <SafeAreaProvider>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Application Error</Text>
+        <Text style={styles.errorMessage}>{error.message}</Text>
+        <Pressable style={styles.retryButton} onPress={retry}>
+          <Text style={styles.retryButtonText}>Reload App</Text>
+        </Pressable>
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
 const styles = StyleSheet.create({
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#090D16',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    color: '#EF4444',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  errorMessage: {
+    color: '#CBD5E1',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#38BDF8',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  retryButtonText: {
+    color: '#001E2C',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   splashContainer: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#090D16',
