@@ -8,66 +8,85 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
   {
     id: 'ur-fatima',
     name: 'Fatima',
-    language: 'ur-PK',
-    pitch: 1.05,
+    language: 'ur',
+    pitch: 1.18,
     rate: 0.92,
     gender: 'female',
-    regionLabel: 'Urdu (Pakistan)',
+    regionLabel: 'Urdu (Warm Female)',
     samplePhrase: 'السلام علیکم، میں آپ کی کیا مدد کر سکتی ہوں؟',
   },
   {
     id: 'ur-tariq',
     name: 'Tariq',
-    language: 'ur-PK',
-    pitch: 0.90,
-    rate: 0.90,
+    language: 'ur',
+    pitch: 0.78,
+    rate: 0.88,
     gender: 'male',
-    regionLabel: 'Urdu (Pakistan)',
-    samplePhrase: 'السلام علیکم، میں بالکل ٹھیک ہوں۔',
+    regionLabel: 'Urdu (Calm Male)',
+    samplePhrase: 'السلام علیکم، میں آپ کا معاون ہوں۔',
   },
   {
     id: 'en-sarah',
     name: 'Sarah',
-    language: 'en-US',
-    pitch: 1.05,
+    language: 'en',
+    pitch: 1.15,
     rate: 0.95,
     gender: 'female',
-    regionLabel: 'English (US)',
+    regionLabel: 'English (US Clear)',
     samplePhrase: 'Hello, how can I help you today?',
   },
   {
     id: 'en-david',
     name: 'David',
-    language: 'en-US',
-    pitch: 0.88,
-    rate: 0.92,
+    language: 'en',
+    pitch: 0.75,
+    rate: 0.90,
     gender: 'male',
-    regionLabel: 'English (US)',
-    samplePhrase: 'Hello, please let me know what you need.',
+    regionLabel: 'English (US Deep)',
+    samplePhrase: 'Hello, I am ready to assist you.',
   },
   {
     id: 'en-emma',
     name: 'Emma',
-    language: 'en-GB',
-    pitch: 1.02,
-    rate: 0.94,
+    language: 'en',
+    pitch: 1.05,
+    rate: 1.04,
     gender: 'female',
-    regionLabel: 'English (UK)',
-    samplePhrase: 'Good day, lovely to meet you.',
+    regionLabel: 'English (UK Friendly)',
+    samplePhrase: 'Good day! Lovely to meet you.',
   },
   {
     id: 'en-oliver',
     name: 'Oliver',
-    language: 'en-GB',
-    pitch: 0.92,
-    rate: 0.92,
+    language: 'en',
+    pitch: 0.85,
+    rate: 0.88,
     gender: 'male',
-    regionLabel: 'English (UK)',
+    regionLabel: 'English (UK Warm)',
     samplePhrase: 'Hello there, hope you are having a pleasant day.',
   },
 ] as const;
 
 export const DEFAULT_VOICE_ID = 'ur-fatima';
+
+let cachedVoices: Speech.Voice[] | null = null;
+
+/**
+ * Retrieves and caches the native speech synthesis voices available on the device.
+ */
+export async function getAvailableNativeVoices(): Promise<Speech.Voice[]> {
+  if (cachedVoices && cachedVoices.length > 0) {
+    return cachedVoices;
+  }
+  try {
+    const voices = await Speech.getAvailableVoicesAsync();
+    cachedVoices = voices;
+    return voices;
+  } catch (err) {
+    console.warn('[TTSManager] Failed to query native voices:', err);
+    return [];
+  }
+}
 
 /**
  * Loads the user's persisted voice preference from AsyncStorage.
@@ -103,52 +122,86 @@ export interface SpeakOptions {
 }
 
 /**
- * Speaks text using on-device expo-speech with automatic Urdu/English script routing
- * and echo-prevention lifecycle callbacks.
+ * Speaks text using on-device expo-speech with automatic Urdu/English script routing,
+ * distinct pitch/rate spread, and echo-prevention lifecycle callbacks.
  */
 export async function speakText(text: string, options: SpeakOptions = {}): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  // Stop any active speech first
+  // Stop any active speech first and wait 60ms for native audio session release
   try {
     await Speech.stop();
+    await new Promise((resolve) => setTimeout(resolve, 60));
   } catch (stopErr) {
     console.warn('[TTSManager] Error stopping previous speech:', stopErr);
   }
 
   const isUrdu = isUrduScript(trimmed);
 
-  // If text is Urdu script, pick an Urdu voice preset. Otherwise use requested or default voice.
-  let activePreset = TTS_VOICE_PRESETS.find((v) => v.id === options.voiceId) ?? TTS_VOICE_PRESETS[0];
+  // Find requested preset
+  const selectedPreset =
+    TTS_VOICE_PRESETS.find((v) => v.id === options.voiceId) ?? TTS_VOICE_PRESETS[0];
 
-  if (isUrdu && !activePreset.language.startsWith('ur')) {
-    // If the active preset is English but text is Urdu, map to corresponding Urdu voice (matching gender)
-    const urduMatch = TTS_VOICE_PRESETS.find(
-      (v) => v.language.startsWith('ur') && v.gender === activePreset.gender
+  let targetPreset = selectedPreset;
+
+  // If text is Urdu script but user chose an English preset, map to the corresponding gender-matched Urdu preset
+  if (isUrdu && selectedPreset.language !== 'ur') {
+    const matchingUrdu = TTS_VOICE_PRESETS.find(
+      (v) => v.language === 'ur' && v.gender === selectedPreset.gender
     ) ?? TTS_VOICE_PRESETS[0];
-    activePreset = urduMatch;
+    targetPreset = matchingUrdu;
+  }
+
+  // Determine native voice identifier if available on device
+  let matchedVoiceIdentifier: string | undefined;
+  try {
+    const available = await getAvailableNativeVoices();
+    if (available && available.length > 0) {
+      // Find voices matching the target language code
+      const langMatches = available.filter((v) =>
+        v.language.toLowerCase().startsWith(targetPreset.language.toLowerCase())
+      );
+
+      if (langMatches.length > 0) {
+        // Look for gender hints in voice name or identifier
+        const genderMatch = langMatches.find((v) =>
+          v.name.toLowerCase().includes(targetPreset.gender) ||
+          v.identifier.toLowerCase().includes(targetPreset.gender)
+        );
+        matchedVoiceIdentifier = (genderMatch ?? langMatches[0]).identifier;
+      }
+    }
+  } catch (voiceErr) {
+    console.warn('[TTSManager] Error matching native voice:', voiceErr);
   }
 
   // Trigger onStart before speech begins (invoking echo-gating pause on microphone)
   options.onStart?.();
 
-  Speech.speak(trimmed, {
-    language: activePreset.language,
-    pitch: activePreset.pitch,
-    rate: activePreset.rate,
-    onDone: () => {
-      options.onDone?.();
-    },
-    onStopped: () => {
-      options.onDone?.();
-    },
-    onError: (err) => {
-      console.warn('[TTSManager] Speech synthesis error:', err);
-      options.onError?.(new Error(String(err)));
-      options.onDone?.();
-    },
-  });
+  try {
+    Speech.speak(trimmed, {
+      language: targetPreset.language, // 'ur' or 'en' (never hyphenated to avoid Android IllformedLocaleException)
+      pitch: targetPreset.pitch,
+      rate: targetPreset.rate,
+      voice: matchedVoiceIdentifier,
+      onDone: () => {
+        options.onDone?.();
+      },
+      onStopped: () => {
+        options.onDone?.();
+      },
+      onError: (err) => {
+        console.warn('[TTSManager] Speech synthesis error:', err);
+        options.onError?.(new Error(String(err)));
+        options.onDone?.();
+      },
+    });
+  } catch (speakErr) {
+    console.error('[TTSManager] Failed to invoke Speech.speak:', speakErr);
+    options.onError?.(speakErr instanceof Error ? speakErr : new Error(String(speakErr)));
+    options.onDone?.();
+  }
 }
 
 /**
