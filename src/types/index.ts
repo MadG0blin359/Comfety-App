@@ -84,3 +84,23 @@ export interface TranscriptionResult {
   language?: string;
 }
 
+export interface TtsVoicePreset {
+  id: string;
+  name: string;
+  language: string;
+  pitch: number;
+  rate: number;
+  gender: 'female' | 'male';
+  regionLabel: string;
+  samplePhrase: string;
+}
+
+export interface QuickReplyItem {
+  id: string;
+  labelEn: string;
+  labelUr: string;
+  spokenText: string;
+  category?: 'greeting' | 'commerce' | 'clarification' | 'navigation' | 'urgent' | 'custom';
+  isCustom?: boolean;
+}
+
