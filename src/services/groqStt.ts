@@ -1,5 +1,6 @@
 import { APP_CONFIG, RATE_LIMITS, ENV_CONFIG } from '../constants/config';
 import { TranscriptionResult } from '../types';
+import { devanagariToUrdu, hasDevanagari } from '../utils/devanagariToUrdu';
 
 let lastGroqRequestTimestamp = 0;
 
@@ -250,74 +251,24 @@ export async function transcribeAudio(
         };
       }
 
-      // Layer 4 Safeguard: Hindi Interception & Native Urdu Auto-Reroute
+      // Layer 4 Safeguard: Zero-Dependency Instant Devanagari-to-Urdu Transliteration
       // If Whisper misidentifies Pakistani speech as Hindi or generates Devanagari script,
-      // re-transcribe this in-memory audio chunk with language='ur' for authentic Nastaliq script.
-      const isHindiDetected =
-        json.language?.toLowerCase() === 'hindi' || containsDevanagari(rawText);
-
-      if (isHindiDetected && !options?.isRetryWithUrdu) {
-        console.log(
-          `[GroqSTT] Hindi/Devanagari detected in speech ("${rawText}"). Re-transcribing with language='ur' for authentic Nastaliq rendering...`
-        );
-        try {
-          const urduResponse = await fetch(APP_CONFIG.groq.endpoint, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${ENV_CONFIG.GROQ_API_KEY}`,
-            },
-            body: buildFormData('ur'),
-            signal: options?.signal,
-          });
-
-          if (urduResponse.ok) {
-            const urduJson = (await urduResponse.json()) as GroqVerboseResponse;
-            let urduRawText = urduJson.text?.trim() ?? '';
-
-            // Clean any residual Devanagari characters
-            if (containsDevanagari(urduRawText)) {
-              urduRawText = urduRawText.replace(/[\u0900-\u097F]+/g, '').trim();
-            }
-
-            const urduCleaned = urduRawText
-              .trim()
-              .replace(/[.,!?؟؛:۔\-_\s]+$/g, '')
-              .toLowerCase();
-
-            if (
-              !urduCleaned ||
-              HALLUCINATION_BLOCKLIST.has(urduCleaned) ||
-              isWhisperHallucination(urduRawText)
-            ) {
-              return {
-                text: '',
-                duration: urduJson.duration ?? json.duration,
-                language: 'urdu',
-              };
-            }
-
-            console.log('[GroqSTT] Successfully decoded to authentic Urdu:', urduRawText);
-            return {
-              text: urduRawText,
-              duration: urduJson.duration ?? json.duration,
-              language: 'urdu',
-            };
-          }
-        } catch (retryErr) {
-          console.warn('[GroqSTT] Urdu re-transcription request failed:', retryErr);
-        }
+      // instantly map Devanagari to authentic Urdu Nastaliq orthography (< 1ms on Hermes, 0 API calls).
+      let finalText = rawText;
+      if (hasDevanagari(finalText) || json.language?.toLowerCase() === 'hindi') {
+        console.log(`[GroqSTT] Converting Devanagari to Urdu Nastaliq script: "${finalText}"`);
+        finalText = devanagariToUrdu(finalText);
       }
 
       // Hard Devanagari exclusion safeguard: ensure zero Hindi characters ever leak into transcript
-      let sanitizedText = rawText;
-      if (containsDevanagari(sanitizedText)) {
-        sanitizedText = sanitizedText.replace(/[\u0900-\u097F]+/g, '').trim();
+      if (hasDevanagari(finalText)) {
+        finalText = finalText.replace(/[\u0900-\u097F]+/g, '').trim();
       }
 
       return {
-        text: sanitizedText,
+        text: finalText,
         duration: json.duration,
-        language: json.language,
+        language: isUrduScript(finalText) ? 'urdu' : json.language,
       };
     } catch (err: unknown) {
       if (isAbortOrCancelError(err) || options?.signal?.aborted) {

@@ -9,8 +9,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "ur-fatima",
     name: "Fatima",
     language: "ur",
-    pitch: 1.15,
-    rate: 0.95,
+    pitch: 1.0,
+    rate: 1.0,
     gender: "female",
     regionLabel: "Urdu (Warm Female)",
     samplePhrase: "السلام علیکم، میں آپ کی کیا مدد کر سکتی ہوں؟",
@@ -19,8 +19,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "ur-tariq",
     name: "Tariq",
     language: "ur",
-    pitch: 0.48,
-    rate: 0.86,
+    pitch: 0.88,
+    rate: 0.92,
     gender: "male",
     regionLabel: "Urdu (Deep Male)",
     samplePhrase: "السلام علیکم، میں آپ کا معاون ہوں۔",
@@ -29,8 +29,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-sarah",
     name: "Sarah",
     language: "en",
-    pitch: 1.15,
-    rate: 0.95,
+    pitch: 1.0,
+    rate: 1.0,
     gender: "female",
     regionLabel: "English (US Clear)",
     samplePhrase: "Hello, how can I help you today?",
@@ -39,8 +39,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-david",
     name: "David",
     language: "en",
-    pitch: 0.52,
-    rate: 0.88,
+    pitch: 1.0,
+    rate: 1.0,
     gender: "male",
     regionLabel: "English (US Deep)",
     samplePhrase: "Hello, I am ready to assist you.",
@@ -49,7 +49,7 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-emma",
     name: "Emma",
     language: "en",
-    pitch: 1.10,
+    pitch: 1.0,
     rate: 1.0,
     gender: "female",
     regionLabel: "English (UK Friendly)",
@@ -59,8 +59,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-oliver",
     name: "Oliver",
     language: "en",
-    pitch: 0.50,
-    rate: 0.86,
+    pitch: 1.0,
+    rate: 1.0,
     gender: "male",
     regionLabel: "English (UK Warm)",
     samplePhrase: "Hello there, hope you are having a pleasant day.",
@@ -72,16 +72,35 @@ export const DEFAULT_VOICE_ID = "ur-fatima";
 let cachedVoices: Speech.Voice[] | null = null;
 
 /**
- * Pre-warms and caches available native voices in background so speakText never blocks on IPC.
+ * Pre-warms and caches available native voices with Android cold-start warmup retry
+ * and offline-first (-local / Enhanced) priority.
  */
 export async function getAvailableNativeVoices(): Promise<Speech.Voice[]> {
   if (cachedVoices && cachedVoices.length > 0) {
     return cachedVoices;
   }
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
-    cachedVoices = voices;
-    return voices;
+    let voices = await Speech.getAvailableVoicesAsync();
+
+    // Cold-start warmup retry: Android TTS native service binder may still be connecting
+    if (!voices || voices.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      voices = await Speech.getAvailableVoicesAsync();
+    }
+
+    // Prioritize offline-first local models and enhanced quality
+    if (voices && voices.length > 0) {
+      voices.sort((a, b) => {
+        const aLocal = a.identifier.toLowerCase().includes("-local") ? 2 : 0;
+        const bLocal = b.identifier.toLowerCase().includes("-local") ? 2 : 0;
+        const aEnhanced = (a.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
+        const bEnhanced = (b.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
+        return (bLocal + bEnhanced) - (aLocal + aEnhanced);
+      });
+    }
+
+    cachedVoices = voices ?? [];
+    return cachedVoices;
   } catch (err) {
     console.warn("[TTSManager] Failed to query native voices:", err);
     return [];
@@ -128,11 +147,13 @@ export interface SpeakOptions {
 }
 
 /**
- * Synchronous voice matching from pre-cached system voices. Zero IPC overhead.
+ * Synchronous voice matching from pre-cached system voices prioritizing Google's
+ * premade human-trained neural voice models (tpd, sfg, rjs, fis, cfc).
  */
 function findMatchingVoiceIdentifier(
   targetLang: string,
   targetGender: "female" | "male",
+  presetId?: string,
 ): string | undefined {
   if (!cachedVoices || cachedVoices.length === 0) return undefined;
 
@@ -141,6 +162,27 @@ function findMatchingVoiceIdentifier(
   );
 
   if (langMatches.length === 0) return undefined;
+
+  // Direct mapping to Google's premade neural voice identifiers on Android
+  const PREMADE_NEURAL_TAGS: Record<string, string[]> = {
+    "en-david": ["tpd", "david", "male", "iom"], // US Male (human-recorded)
+    "en-sarah": ["sfg", "sarah", "female", "samantha"], // US Female (human-recorded)
+    "en-oliver": ["rjs", "oliver", "male", "george"], // UK Male (human-recorded)
+    "en-emma": ["fis", "emma", "female", "victoria"], // UK Female (human-recorded)
+    "ur-fatima": ["cfc", "fatima", "female"], // Urdu Female (human-recorded)
+    "ur-tariq": ["cfc", "tariq", "male"], // Urdu (Google ships cfc for Urdu)
+  };
+
+  if (presetId && PREMADE_NEURAL_TAGS[presetId]) {
+    const tags = PREMADE_NEURAL_TAGS[presetId];
+    for (const tag of tags) {
+      const match = langMatches.find((v) => {
+        const idLower = (v.identifier + " " + v.name).toLowerCase();
+        return idLower.includes(tag);
+      });
+      if (match) return match.identifier;
+    }
+  }
 
   const maleKeywords = [
     "male",
@@ -175,7 +217,6 @@ function findMatchingVoiceIdentifier(
       const lower = (v.name + " " + v.identifier).toLowerCase();
       return maleKeywords.some((kw) => lower.includes(kw));
     });
-    // Return male voice identifier if available; otherwise return undefined so engine doesn't lock to female default
     return maleMatch?.identifier;
   } else {
     const femaleMatch = langMatches.find((v) => {
@@ -186,15 +227,50 @@ function findMatchingVoiceIdentifier(
   }
 }
 
+const MAX_SPEECH_CHUNK_LENGTH = 3500;
+
+/**
+ * Splits lengthy text along sentence boundaries so it never exceeds
+ * Android's 4,000-character utterance ceiling (Speech.maxSpeechInputLength).
+ */
+export function splitTextIntoSpeechChunks(text: string): string[] {
+  if (text.length <= MAX_SPEECH_CHUNK_LENGTH) {
+    return [text];
+  }
+
+  const sentenceRegex = /([^۔.!?\n]+[۔.!?\n]*)/g;
+  const sentences = text.match(sentenceRegex) ?? [text];
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > MAX_SPEECH_CHUNK_LENGTH) {
+      if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+      }
+      currentChunk = sentence;
+    } else {
+      currentChunk += sentence;
+    }
+  }
+
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks.length > 0 ? chunks : [text];
+}
+
 /**
  * Speaks text using on-device expo-speech with zero perceived delay,
- * automatic Urdu/English script routing, and echo-prevention lifecycle callbacks.
+ * automatic Urdu/English script routing, sentence chunking for long texts,
+ * and echo-prevention lifecycle callbacks.
  */
 export function speakText(text: string, options: SpeakOptions = {}): void {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  // Stop any active utterance without blocking
+  // Stop any active utterance to clear queue and preempt ongoing speech
   Speech.stop().catch(() => {});
 
   const isUrdu = isUrduScript(trimmed);
@@ -215,41 +291,62 @@ export function speakText(text: string, options: SpeakOptions = {}): void {
     targetPreset = matchingUrdu;
   }
 
-  // Fast synchronous voice match from cached voices
+  // Fast synchronous voice match prioritizing Google premade neural models
   const matchedVoice = findMatchingVoiceIdentifier(
     targetPreset.language,
     targetPreset.gender,
+    targetPreset.id,
   );
 
   // Trigger onStart before speech begins (invoking echo-gating pause on microphone)
   options.onStart?.();
 
-  try {
-    Speech.speak(trimmed, {
-      language: targetPreset.language, // 'ur' or 'en'
-      pitch: targetPreset.pitch,
-      rate: targetPreset.rate,
-      volume: 1.0,
-      voice: matchedVoice,
-      onDone: () => {
-        options.onDone?.();
-      },
-      onStopped: () => {
-        options.onDone?.();
-      },
-      onError: (err) => {
-        console.warn("[TTSManager] Speech synthesis error:", err);
-        options.onError?.(new Error(String(err)));
-        options.onDone?.();
-      },
-    });
-  } catch (speakErr) {
-    console.error("[TTSManager] Failed to invoke Speech.speak:", speakErr);
-    options.onError?.(
-      speakErr instanceof Error ? speakErr : new Error(String(speakErr)),
-    );
-    options.onDone?.();
-  }
+  // Split into sentence chunks if text exceeds Android's 4,000 character limit
+  const chunks = splitTextIntoSpeechChunks(trimmed);
+  let chunkIndex = 0;
+
+  const speakNextChunk = () => {
+    if (chunkIndex >= chunks.length) {
+      options.onDone?.();
+      return;
+    }
+
+    const currentChunkText = chunks[chunkIndex++];
+    const isFinalChunk = chunkIndex >= chunks.length;
+
+    try {
+      Speech.speak(currentChunkText, {
+        language: targetPreset.language, // 'ur' or 'en'
+        pitch: targetPreset.pitch,
+        rate: targetPreset.rate,
+        volume: 1.0,
+        voice: matchedVoice,
+        onDone: () => {
+          if (isFinalChunk) {
+            options.onDone?.();
+          } else {
+            speakNextChunk();
+          }
+        },
+        onStopped: () => {
+          options.onDone?.();
+        },
+        onError: (err) => {
+          console.warn("[TTSManager] Speech synthesis error:", err);
+          options.onError?.(new Error(String(err)));
+          options.onDone?.();
+        },
+      });
+    } catch (speakErr) {
+      console.error("[TTSManager] Failed to invoke Speech.speak:", speakErr);
+      options.onError?.(
+        speakErr instanceof Error ? speakErr : new Error(String(speakErr)),
+      );
+      options.onDone?.();
+    }
+  };
+
+  speakNextChunk();
 }
 
 /**
