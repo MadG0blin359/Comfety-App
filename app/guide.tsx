@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { THEME } from '../src/constants/theme';
 
@@ -24,17 +25,23 @@ export default function GuideScreen() {
           accessibilityLabel="Go back"
           accessibilityHint="Returns to mode selection screen"
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={THEME.colors.textPrimary} />
         </Pressable>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Guide Mode</Text>
-          <Text style={styles.headerSubtitle}>Vision AI Active</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            Guide Mode
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            Vision AI Active
+          </Text>
         </View>
 
         <View style={styles.statusBadge}>
           <View style={styles.statusDot} />
-          <Text style={styles.statusBadgeText}>Radar ON</Text>
+          <Text style={styles.statusBadgeText} numberOfLines={1}>
+            Radar ON
+          </Text>
         </View>
       </View>
 
@@ -62,48 +69,46 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: THEME.spacing.md,
     paddingVertical: THEME.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.borderSubtle,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    gap: THEME.spacing.sm,
   },
   backButton: {
-    minWidth: THEME.touchTargets.min,
-    minHeight: THEME.touchTargets.min,
+    width: 44,
+    height: 44,
+    borderRadius: THEME.borderRadius.badge,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: THEME.borderRadius.badge,
-    backgroundColor: THEME.colors.surfaceInteractive,
-  },
-  backButtonText: {
-    color: THEME.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
+    flexShrink: 0,
   },
   headerTitleContainer: {
-    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
   headerTitle: {
     color: THEME.colors.textPrimary,
-    fontSize: THEME.typography.sizes.headlineMd,
+    fontSize: THEME.typography.sizes.bodyLg,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
     color: THEME.colors.textSecondary,
-    fontSize: THEME.typography.sizes.caption,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: 12,
+    marginTop: 1,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: THEME.spacing.sm,
-    paddingVertical: 6,
-    borderRadius: THEME.borderRadius.badge,
-    backgroundColor: THEME.colors.surfaceInteractive,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: THEME.borderRadius.full,
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
     borderWidth: 1,
-    borderColor: THEME.colors.guideBorder,
+    borderColor: 'rgba(52, 211, 153, 0.3)',
+    flexShrink: 0,
   },
   statusDot: {
     width: 6,
@@ -114,8 +119,8 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: THEME.colors.guideAccent,
-    fontSize: THEME.typography.sizes.caption,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
   },
   content: {
     flex: 1,

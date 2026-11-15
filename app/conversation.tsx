@@ -74,8 +74,12 @@ export default function ConversationScreen() {
         </Pressable>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Conversation Mode</Text>
-          <Text style={styles.headerSubtitle}>Live Bilingual Speech</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            Conversation
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            Live Bilingual Speech
+          </Text>
         </View>
 
         {/* Live Status Pill */}
@@ -114,8 +118,9 @@ export default function ConversationScreen() {
                   : THEME.colors.danger,
               },
             ]}
+            numberOfLines={1}
           >
-            {isTranscribing ? 'Transcribing...' : isRecording ? 'Listening' : 'Paused'}
+            {isTranscribing ? 'Transcribing' : isRecording ? 'Listening' : 'Paused'}
           </Text>
         </View>
       </View>
@@ -253,39 +258,43 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: THEME.spacing.md,
     paddingVertical: THEME.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    gap: THEME.spacing.sm,
   },
   backButton: {
-    width: THEME.touchTargets.min,
-    height: THEME.touchTargets.min,
+    width: 44,
+    height: 44,
     borderRadius: THEME.borderRadius.badge,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   headerTitleContainer: {
-    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
   headerTitle: {
     color: THEME.colors.textPrimary,
-    fontSize: THEME.typography.sizes.headlineMd,
+    fontSize: THEME.typography.sizes.bodyLg,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   headerSubtitle: {
     color: THEME.colors.textSecondary,
-    fontSize: THEME.typography.sizes.caption,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 1,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: THEME.borderRadius.full,
+    flexShrink: 0,
   },
   statusDot: {
     width: 6,

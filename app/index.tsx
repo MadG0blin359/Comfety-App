@@ -170,8 +170,8 @@ export default function HomeScreen() {
         <View style={styles.container}>
           {/* Minimal Ambient Header */}
           <View style={styles.header}>
-            <Text style={styles.appTitle}>Comfety</Text>
-            <Text style={styles.headerSubtitle}>Assistive Communication & Navigation</Text>
+            <Text style={styles.appTitle} numberOfLines={1} ellipsizeMode="tail">Comfety</Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">Assistive Communication & Navigation</Text>
           </View>
 
           {/* 50/50 Viewport Split: Card 1 (Conversation Mode) */}
