@@ -187,7 +187,7 @@ export default function HomeScreen() {
           "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, or shake your phone to start Guide Mode.",
           {
             language: "en",
-            rate: 0.80, // Comfortable, normal pace for clear comprehension
+            rate: 0.8, // Comfortable, normal pace for clear comprehension
             pitch: 1.0,
           },
         );
@@ -445,11 +445,11 @@ export default function HomeScreen() {
               <Ionicons name="volume-high-outline" size={22} color="#38BDF8" />
             </View>
             <View style={styles.footerTextContainer}>
-              <Text style={styles.footerTitle}>
-                Spoken Guidance & Hands-Free Entry
-              </Text>
+              {/* <Text style={styles.footerTitle}>
+                Spoken Guidance & Hands-Free 
+              </Text> */}
               <Text style={styles.footerSubtitle}>
-                Speaks on open • Tap cards or shake phone for Guide Mode
+                Tap cards or shake phone for Guide Mode
               </Text>
             </View>
           </LinearGradient>
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: THEME.spacing.md,
-    paddingBottom: THEME.spacing.sm,
+    paddingBottom: THEME.spacing.md,
     justifyContent: "space-between",
   },
   header: {
@@ -645,6 +645,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 16,
     padding: 12,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: "#334155",
     shadowColor: "#000",
