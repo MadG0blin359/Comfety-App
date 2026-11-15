@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { THEME } from '../src/constants/theme';
@@ -566,31 +567,42 @@ export default function ConversationScreen() {
             </Pressable>
           )}
 
-          {/* Speak Button: Instant Zero-Delay Vocalization */}
+          {/* Speak Button: Instant Zero-Delay Vocalization with Neon Gradient */}
           <Pressable
-            style={[
-              styles.speakSendButton,
-              !inputText.trim() && styles.speakSendButtonDisabled,
-            ]}
+            style={styles.speakSendWrapper}
             onPress={handleSendTypedReply}
             disabled={!inputText.trim()}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Speak typed text aloud in current voice"
           >
-            <Ionicons
-              name="volume-high"
-              size={20}
-              color={inputText.trim() ? '#001E2C' : '#64748B'}
-            />
-            <Text
+            <LinearGradient
+              colors={
+                inputText.trim()
+                  ? ['#38BDF8', '#0284C7']
+                  : ['#1E293B', '#1E293B']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={[
-                styles.speakSendText,
-                !inputText.trim() && styles.speakSendTextDisabled,
+                styles.speakSendButton,
+                inputText.trim() ? styles.speakSendNeonGlow : styles.speakSendButtonDisabled,
               ]}
             >
-              Speak
-            </Text>
+              <Ionicons
+                name="volume-high"
+                size={20}
+                color={inputText.trim() ? '#001E2C' : '#64748B'}
+              />
+              <Text
+                style={[
+                  styles.speakSendText,
+                  !inputText.trim() && styles.speakSendTextDisabled,
+                ]}
+              >
+                Speak
+              </Text>
+            </LinearGradient>
           </Pressable>
         </View>
 
@@ -598,28 +610,39 @@ export default function ConversationScreen() {
         {!isKeyboardOpen && (
           <View style={styles.bottomBar}>
             <Pressable
-              style={[
-                styles.controlButton,
-                isRecording ? styles.pauseButton : styles.resumeButton,
-              ]}
+              style={styles.controlButtonWrapper}
               onPress={toggleRecording}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={isRecording ? 'Pause Live Transcription' : 'Resume Live Transcription'}
             >
-              <Ionicons
-                name={isRecording ? 'pause' : 'mic'}
-                size={20}
-                color={isRecording ? '#FFFFFF' : '#001E2C'}
-              />
-              <Text
+              <LinearGradient
+                colors={
+                  isRecording
+                    ? ['#EF4444', '#DC2626', '#991B1B']
+                    : ['#38BDF8', '#0284C7', '#0369A1']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
                 style={[
-                  styles.controlButtonText,
-                  isRecording ? styles.pauseButtonText : styles.resumeButtonText,
+                  styles.controlButton,
+                  isRecording ? styles.pauseNeonGlow : styles.resumeNeonGlow,
                 ]}
               >
-                {isRecording ? 'Pause Listening' : 'Resume Listening'}
-              </Text>
+                <Ionicons
+                  name={isRecording ? 'pause' : 'mic'}
+                  size={20}
+                  color={isRecording ? '#FFFFFF' : '#001E2C'}
+                />
+                <Text
+                  style={[
+                    styles.controlButtonText,
+                    isRecording ? styles.pauseButtonText : styles.resumeButtonText,
+                  ]}
+                >
+                  {isRecording ? 'Pause Listening' : 'Resume Listening'}
+                </Text>
+              </LinearGradient>
             </Pressable>
 
             {transcripts.length > 0 && (
@@ -983,18 +1006,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  speakSendWrapper: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   speakSendButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: THEME.colors.conversationAccent,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 46,
     justifyContent: 'center',
   },
+  speakSendNeonGlow: {
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
+  },
   speakSendButtonDisabled: {
     backgroundColor: '#1E293B',
+    opacity: 0.6,
   },
   speakSendText: {
     color: '#001E2C',
@@ -1014,14 +1050,37 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
     gap: THEME.spacing.sm,
   },
-  controlButton: {
+  controlButtonWrapper: {
     flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  controlButton: {
+    width: '100%',
     height: 48,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: THEME.spacing.sm,
+  },
+  resumeNeonGlow: {
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(56, 189, 248, 0.5)',
+  },
+  pauseNeonGlow: {
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
   },
   resumeButton: {
     backgroundColor: THEME.colors.conversationAccent,
