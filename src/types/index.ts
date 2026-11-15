@@ -69,3 +69,18 @@ export interface NavigationRouteCard {
   badgeText: string;
   badgeIcon: string;
 }
+
+export interface TranscriptItem {
+  id: string;
+  text: string;
+  sender: 'partner' | 'user';
+  timestamp: number;
+  isUrdu?: boolean;
+}
+
+export interface TranscriptionResult {
+  text: string;
+  duration?: number;
+  language?: string;
+}
+
