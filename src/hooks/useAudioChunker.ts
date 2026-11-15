@@ -44,7 +44,7 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const isLoopRunningRef = useRef<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const MIN_SPEECH_FRAMES = 3; // At least 300ms of sustained speech energy (filters transient clicks & tap vibrations)
+  const MIN_SPEECH_FRAMES = 4; // At least 4 polls (400ms of active speech > -35dB) required to discard transient clicks/rustles
 
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,

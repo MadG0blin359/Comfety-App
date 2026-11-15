@@ -79,6 +79,40 @@ export interface TranscribeOptions {
   signal?: AbortSignal;
 }
 
+export interface WhisperSegment {
+  id?: number;
+  seek?: number;
+  start?: number;
+  end?: number;
+  text: string;
+  tokens?: number[];
+  temperature?: number;
+  avg_logprob?: number;
+  compression_ratio?: number;
+  no_speech_prob?: number;
+}
+
+export interface GroqVerboseResponse {
+  task?: string;
+  language?: string;
+  duration?: number;
+  text?: string;
+  segments?: WhisperSegment[];
+}
+
+export const HALLUCINATION_BLOCKLIST = new Set<string>([
+  'موسیقی',
+  'music',
+  'شکریہ',
+  'سبسکرائب',
+  'اردو اور انگریزی گفتگو',
+  'bilingual urdu and english speech',
+  'سلام علیکم',
+  'السلام علیکم',
+  'یہ کتنے کا ہے؟',
+  'اوٹھ با ملوم سلام علیکم',
+]);
+
 /**
  * Transcribes audio via Groq Whisper Large v3 Turbo REST endpoint.
  * Features prompt conditioning for Pakistani code-switching and Urdu Nastaliq script preservation.
@@ -127,7 +161,7 @@ export async function transcribeAudio(
     formData.append('file', audioPart as unknown as Blob);
     formData.append('model', APP_CONFIG.groq.model);
     formData.append('prompt', APP_CONFIG.groq.prompt);
-    formData.append('response_format', 'json');
+    formData.append('response_format', 'verbose_json');
     formData.append('temperature', '0.0');
     return formData;
   };
@@ -167,8 +201,43 @@ export async function transcribeAudio(
         throw new Error(`Groq STT API Error (${response.status}): ${errorText}`);
       }
 
-      const json = (await response.json()) as { text?: string; duration?: number; language?: string };
+      const json = (await response.json()) as GroqVerboseResponse;
       const rawText = json.text?.trim() ?? '';
+
+      // Layer 2 Safeguard: Discard chunk if Whisper's internal confidence flags it as silence
+      if (json.segments && json.segments.length > 0) {
+        const isHallucinatedSilence = json.segments.every(
+          (seg) => (seg.no_speech_prob ?? 0) > 0.6 || (seg.avg_logprob ?? 0) < -1.0
+        );
+        if (isHallucinatedSilence) {
+          console.log(
+            '[GroqSTT] Discarded silent chunk (no_speech_prob > 0.6 or avg_logprob < -1.0):',
+            rawText
+          );
+          return {
+            text: '',
+            duration: json.duration,
+            language: json.language,
+          };
+        }
+      }
+
+      // Layer 3 Safeguard: Block known silence/prompt artifacts
+      const cleaned = rawText
+        .trim()
+        .replace(/[.,!?؟؛:۔\-_\s]+$/g, '')
+        .toLowerCase();
+
+      if (!cleaned || HALLUCINATION_BLOCKLIST.has(cleaned) || isWhisperHallucination(rawText)) {
+        if (cleaned) {
+          console.log('[GroqSTT] Filtered known hallucination artifact:', rawText);
+        }
+        return {
+          text: '',
+          duration: json.duration,
+          language: json.language,
+        };
+      }
 
       return {
         text: rawText,
