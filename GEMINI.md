@@ -22,17 +22,17 @@ All intelligence runs directly from the mobile client using two free-tier cloud 
    - **Engine:** On-device `expo-speech` (0 external API calls, unlimited quota).
    - **Enforcement:** Expose at least 6 distinct voice presets mapped to available OS neural voices across English and Urdu locales with distinct pitch and rate parameters.
 
-3. **Unified Vision, OCR, Simplification & Structural Hazards (`src/services/geminiVision.ts`):**
-   - **Model:** `gemini-3.8-flash` via the official `@google/genai` SDK.
-   - **Quota Ceiling:** ~10–15 RPM / 1,500 RPD.
+3. **Vision, OCR, Simplification & Structural Hazards (`src/services/geminiVision.ts`):**
+   - **Primary Model:** `gemini-3.8-flash` (from `AI_MODELS.VISION_PRIMARY_MODEL`) via `@google/genai`.
+   - **Fast Fallback Model:** `gemini-3.5-flash-lite` (from `AI_MODELS.VISION_FAST_FALLBACK_MODEL`). Automatically route 7-second structural hazard checks to `gemini-3.5-flash-lite` if `gemini-3.8-flash` returns `HTTP 429` or approaches RPM limits.
    - **Dual-Resolution Routing:**
      - _On-Demand Reading & Simplification (`media_resolution: "high"`):_ Triggered exclusively by user gesture or voice command (reading medicine labels, bills, signs, or re-explaining previous responses in simpler words). Retains in-memory multi-turn `Content[]` history.
      - _Throttled Structural Hazard Check (`media_resolution: "low"`):_ Strictly rate-limited to **at most 1 request every `7,000ms`** (`<= 8.5 RPM`) and active only when `expo-sensors` Accelerometer detects walking motion. Inspects compressed `512x384` JPEG frames specifically for **stairs** and **open drains**.
-   - **Local Context Injection (Replaces Vector RAG):** Load user preferences and saved accessibility context (e.g., preferred explanation reading level, saved emergency/medical notes) from `AsyncStorage` key `comfety_user_context` and inject them directly into `systemInstruction`.
+   - **Local Context Injection (Replaces Vector RAG):** Load user preferences and saved accessibility context from `AsyncStorage` key `comfety_user_context` and inject them directly into `systemInstruction`.
 
 4. **Real-Time Local Obstacle Detection (`src/hooks/useObstacleLoop.ts`):**
-   - **Engine:** `react-native-fast-tflite` running pre-quantized offline weights (`assets/models/detect.tflite`, sourced from Hugging Face and bundled locally) at `>= 10 FPS` with `0` network calls.
-   - **Scope:** Immediate detection of **people** and **vehicles** in the camera frame.
+   - **Engine:** `react-native-fast-tflite` running quantized COCO-trained `efficientdet-lite0` weights (`assets/models/efficientdet-lite0.tflite`) at `>= 10 FPS` with `0` network calls.
+   - **Input & Target Classes:** Resize camera frames via `vision-camera-resize-plugin` to `320x320` RGB (`uint8`). Trigger immediate priority warnings for COCO classes: `person`, `car`, `motorcycle`, `bus`, and `truck`.
 
 5. **Explicit Architectural Exclusions:**
    - Do **NOT** install or import `langchain`, `@langchain/*`, vector database SDKs, embedding models, or Hugging Face cloud Inference APIs (`api-inference.huggingface.co`).
