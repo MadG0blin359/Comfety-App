@@ -1,10 +1,14 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +16,24 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { THEME } from '../src/constants/theme';
 import { useAudioChunker } from '../src/hooks/useAudioChunker';
+import { QuickReplyItem } from '../src/types';
+import {
+  DEFAULT_QUICK_REPLIES,
+  loadCustomPhrases,
+  addCustomPhrase,
+  deleteCustomPhrase,
+} from '../src/constants/quickReplies';
+import {
+  TTS_VOICE_PRESETS,
+  DEFAULT_VOICE_ID,
+  loadSelectedVoiceId,
+  saveSelectedVoiceId,
+  speakText,
+  stopSpeech,
+} from '../src/services/ttsManager';
+import { CounterDisplayModal } from '../src/components/CounterDisplayModal';
+import { VoiceSelectorModal } from '../src/components/VoiceSelectorModal';
+import { SavePhraseModal } from '../src/components/SavePhraseModal';
 
 export default function ConversationScreen() {
   const router = useRouter();
@@ -26,8 +48,39 @@ export default function ConversationScreen() {
     error,
     startRecording,
     stopRecording,
+    pauseForTts,
+    resumeAfterTts,
     clearTranscripts,
+    addUserReply,
   } = useAudioChunker({ enabled: true });
+
+  // Phase 3 State: Voice selection, quick replies, typed response, modals
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(DEFAULT_VOICE_ID);
+  const [customPhrases, setCustomPhrases] = useState<QuickReplyItem[]>([]);
+  const [inputText, setInputText] = useState<string>('');
+  const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
+
+  // Modal visibility states
+  const [counterModalVisible, setCounterModalVisible] = useState<boolean>(false);
+  const [counterModalText, setCounterModalText] = useState<string>('');
+  const [voiceModalVisible, setVoiceModalVisible] = useState<boolean>(false);
+  const [savePhraseModalVisible, setSavePhraseModalVisible] = useState<boolean>(false);
+
+  // Load persisted voice & custom phrases on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const voiceId = await loadSelectedVoiceId();
+      const phrases = await loadCustomPhrases();
+      if (isMounted) {
+        setSelectedVoiceId(voiceId);
+        setCustomPhrases(phrases);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Auto-scroll to bottom when new transcript items arrive
   useEffect(() => {
@@ -38,8 +91,16 @@ export default function ConversationScreen() {
     }
   }, [transcripts]);
 
+  // Active voice preset metadata
+  const currentVoice =
+    TTS_VOICE_PRESETS.find((v) => v.id === selectedVoiceId) ?? TTS_VOICE_PRESETS[0];
+
+  // Combined quick replies: Custom phrases first, then defaults
+  const allQuickReplies: QuickReplyItem[] = [...customPhrases, ...DEFAULT_QUICK_REPLIES];
+
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    stopSpeech();
     stopRecording();
     router.back();
   };
@@ -56,6 +117,116 @@ export default function ConversationScreen() {
   const handleClear = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     clearTranscripts();
+  };
+
+  /**
+   * Vocalizes text via on-device expo-speech with automatic echo prevention.
+   * Pauses useAudioChunker before speech and resumes 300ms post-completion.
+   */
+  const handleSpeakAloud = useCallback(
+    async (textToSpeak: string, logAsUserBubble = false) => {
+      const trimmed = textToSpeak.trim();
+      if (!trimmed) return;
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      if (logAsUserBubble) {
+        addUserReply(trimmed);
+      }
+
+      await speakText(trimmed, {
+        voiceId: selectedVoiceId,
+        onStart: () => {
+          pauseForTts();
+          setIsSpeaking(true);
+        },
+        onDone: () => {
+          setIsSpeaking(false);
+          resumeAfterTts();
+        },
+        onError: () => {
+          setIsSpeaking(false);
+          resumeAfterTts();
+        },
+      });
+    },
+    [selectedVoiceId, pauseForTts, resumeAfterTts, addUserReply]
+  );
+
+  /**
+   * Handles quick reply chip tap: immediate vocalization + transcript logging.
+   */
+  const handleQuickReplyPress = (reply: QuickReplyItem) => {
+    handleSpeakAloud(reply.spokenText, true);
+  };
+
+  /**
+   * Handles custom phrase long-press to allow deletion.
+   */
+  const handleQuickReplyLongPress = (reply: QuickReplyItem) => {
+    if (!reply.isCustom) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert(
+      'Delete Saved Phrase',
+      `Remove "${reply.spokenText}" from your quick-reply tray?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const updated = await deleteCustomPhrase(reply.id);
+              setCustomPhrases(updated);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (err) {
+              console.warn('[Conversation] Failed to delete phrase:', err);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  /**
+   * Vocalizes custom typed input text, logs it to feed, and resets input field.
+   */
+  const handleSendTypedReply = () => {
+    const trimmed = inputText.trim();
+    if (!trimmed) return;
+
+    handleSpeakAloud(trimmed, true);
+    setInputText('');
+  };
+
+  /**
+   * Opens the full-screen 40px Counter Display Card.
+   */
+  const handleOpenCounterDisplay = (textToShow: string) => {
+    const trimmed = textToShow.trim();
+    if (!trimmed) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCounterModalText(trimmed);
+    setCounterModalVisible(true);
+  };
+
+  /**
+   * Persists selected voice and updates state.
+   */
+  const handleSelectVoice = async (voiceId: string) => {
+    setSelectedVoiceId(voiceId);
+    setVoiceModalVisible(false);
+    await saveSelectedVoiceId(voiceId);
+  };
+
+  /**
+   * Saves a new custom phrase and adds it to the quick replies.
+   */
+  const handleSaveCustomPhrase = async (phraseText: string) => {
+    const updated = await addCustomPhrase(phraseText);
+    setCustomPhrases(updated);
   };
 
   return (
@@ -82,12 +253,32 @@ export default function ConversationScreen() {
           </Text>
         </View>
 
+        {/* Voice Selector Pill */}
+        <Pressable
+          style={styles.voiceSelectorPill}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setVoiceModalVisible(true);
+          }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={`Voice: ${currentVoice.name}. Tap to change speaking voice.`}
+        >
+          <Ionicons name="mic-circle" size={18} color={THEME.colors.conversationAccent} />
+          <Text style={styles.voiceSelectorText} numberOfLines={1}>
+            {currentVoice.name}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={THEME.colors.textSecondary} />
+        </Pressable>
+
         {/* Live Status Pill */}
         <View
           style={[
             styles.statusBadge,
             {
-              backgroundColor: isTranscribing
+              backgroundColor: isSpeaking
+                ? 'rgba(168, 85, 247, 0.2)'
+                : isTranscribing
                 ? 'rgba(56, 189, 248, 0.2)'
                 : isRecording
                 ? 'rgba(52, 211, 153, 0.15)'
@@ -99,7 +290,9 @@ export default function ConversationScreen() {
             style={[
               styles.statusDot,
               {
-                backgroundColor: isTranscribing
+                backgroundColor: isSpeaking
+                  ? '#A855F7'
+                  : isTranscribing
                   ? THEME.colors.conversationAccent
                   : isRecording
                   ? THEME.colors.safe
@@ -111,7 +304,9 @@ export default function ConversationScreen() {
             style={[
               styles.statusText,
               {
-                color: isTranscribing
+                color: isSpeaking
+                  ? '#C084FC'
+                  : isTranscribing
                   ? THEME.colors.conversationAccent
                   : isRecording
                   ? THEME.colors.safe
@@ -120,7 +315,13 @@ export default function ConversationScreen() {
             ]}
             numberOfLines={1}
           >
-            {isTranscribing ? 'Transcribing' : isRecording ? 'Listening' : 'Paused'}
+            {isSpeaking
+              ? 'Speaking'
+              : isTranscribing
+              ? 'Transcribing'
+              : isRecording
+              ? 'Listening'
+              : 'Paused'}
           </Text>
         </View>
       </View>
@@ -202,50 +403,205 @@ export default function ConversationScreen() {
               >
                 {item.text}
               </Text>
+
+              {/* Message Actions: Show Large & Speak Again */}
+              <View style={styles.messageActionsRow}>
+                <Pressable
+                  style={styles.messageActionBtn}
+                  onPress={() => handleOpenCounterDisplay(item.text)}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Show large 40px counter display"
+                >
+                  <Ionicons name="expand-outline" size={16} color={THEME.colors.textSecondary} />
+                  <Text style={styles.messageActionText}>Show Large</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.messageActionBtn}
+                  onPress={() => handleSpeakAloud(item.text, false)}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Speak message aloud"
+                >
+                  <Ionicons name="volume-high-outline" size={16} color={THEME.colors.textSecondary} />
+                  <Text style={styles.messageActionText}>Speak</Text>
+                </Pressable>
+              </View>
             </View>
           ))
         )}
       </ScrollView>
 
-      {/* Bottom Controls Bar */}
-      <View style={styles.bottomBar}>
-        <Pressable
-          style={[
-            styles.controlButton,
-            isRecording ? styles.pauseButton : styles.resumeButton,
-          ]}
-          onPress={toggleRecording}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={isRecording ? 'Pause Live Transcription' : 'Resume Live Transcription'}
+      {/* Quick-Reply Ribbon Tray (Horizontal scrolling chips with + Save Phrase) */}
+      <View style={styles.quickReplyContainer}>
+        <ScrollView
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickReplyScrollContent}
         >
-          <Ionicons
-            name={isRecording ? 'pause' : 'mic'}
-            size={20}
-            color={isRecording ? '#FFFFFF' : '#001E2C'}
-          />
-          <Text
-            style={[
-              styles.controlButtonText,
-              isRecording ? styles.pauseButtonText : styles.resumeButtonText,
-            ]}
-          >
-            {isRecording ? 'Pause Listening' : 'Resume Listening'}
-          </Text>
-        </Pressable>
-
-        {transcripts.length > 0 && (
+          {/* + Save Phrase Trigger Chip */}
           <Pressable
-            style={styles.clearButton}
-            onPress={handleClear}
+            style={styles.addPhraseChip}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSavePhraseModalVisible(true);
+            }}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Clear transcription history"
+            accessibilityLabel="Add custom phrase"
           >
-            <Ionicons name="trash-outline" size={20} color={THEME.colors.textSecondary} />
+            <Ionicons name="add" size={18} color={THEME.colors.conversationAccent} />
+            <Text style={styles.addPhraseText}>+ Save Phrase</Text>
           </Pressable>
-        )}
+
+          {/* Quick-Reply Chips */}
+          {allQuickReplies.map((reply) => (
+            <Pressable
+              key={reply.id}
+              style={[
+                styles.replyChip,
+                reply.isCustom && styles.customReplyChip,
+              ]}
+              onPress={() => handleQuickReplyPress(reply)}
+              onLongPress={() => handleQuickReplyLongPress(reply)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Quick reply: ${reply.spokenText}`}
+              accessibilityHint={reply.isCustom ? 'Long press to delete' : 'Tap to speak aloud'}
+            >
+              <Text style={styles.replyChipUrdu} numberOfLines={1}>
+                {reply.labelUr}
+              </Text>
+              {reply.labelEn !== reply.labelUr && (
+                <Text style={styles.replyChipEn} numberOfLines={1}>
+                  {reply.labelEn}
+                </Text>
+              )}
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
+
+      {/* Bottom Typed Input & Controls Bar */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.inputBar}>
+          <TextInput
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Type a reply to speak... / جواب لکھیں"
+            placeholderTextColor="#64748B"
+            returnKeyType="send"
+            onSubmitEditing={handleSendTypedReply}
+            accessible={true}
+            accessibilityLabel="Type custom reply text"
+          />
+
+          {/* Show Large Action on Current Typed Text */}
+          {inputText.trim().length > 0 && (
+            <Pressable
+              style={styles.inputActionBtn}
+              onPress={() => handleOpenCounterDisplay(inputText)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Show typed reply in large 40px display"
+            >
+              <Ionicons name="expand-outline" size={20} color={THEME.colors.conversationAccent} />
+            </Pressable>
+          )}
+
+          {/* Speak Button */}
+          <Pressable
+            style={[
+              styles.speakSendButton,
+              !inputText.trim() && styles.speakSendButtonDisabled,
+            ]}
+            onPress={handleSendTypedReply}
+            disabled={!inputText.trim()}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Speak typed text aloud"
+          >
+            <Ionicons
+              name="volume-high"
+              size={20}
+              color={inputText.trim() ? '#001E2C' : '#64748B'}
+            />
+            <Text
+              style={[
+                styles.speakSendText,
+                !inputText.trim() && styles.speakSendTextDisabled,
+              ]}
+            >
+              Speak
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Bottom Utility Controls Bar */}
+        <View style={styles.bottomBar}>
+          <Pressable
+            style={[
+              styles.controlButton,
+              isRecording ? styles.pauseButton : styles.resumeButton,
+            ]}
+            onPress={toggleRecording}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={isRecording ? 'Pause Live Transcription' : 'Resume Live Transcription'}
+          >
+            <Ionicons
+              name={isRecording ? 'pause' : 'mic'}
+              size={20}
+              color={isRecording ? '#FFFFFF' : '#001E2C'}
+            />
+            <Text
+              style={[
+                styles.controlButtonText,
+                isRecording ? styles.pauseButtonText : styles.resumeButtonText,
+              ]}
+            >
+              {isRecording ? 'Pause Listening' : 'Resume Listening'}
+            </Text>
+          </Pressable>
+
+          {transcripts.length > 0 && (
+            <Pressable
+              style={styles.clearButton}
+              onPress={handleClear}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Clear transcription history"
+            >
+              <Ionicons name="trash-outline" size={20} color={THEME.colors.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Modals */}
+      <CounterDisplayModal
+        visible={counterModalVisible}
+        text={counterModalText}
+        onClose={() => setCounterModalVisible(false)}
+        onSpeakAgain={(text) => handleSpeakAloud(text, false)}
+      />
+
+      <VoiceSelectorModal
+        visible={voiceModalVisible}
+        selectedVoiceId={selectedVoiceId}
+        onSelectVoice={handleSelectVoice}
+        onClose={() => setVoiceModalVisible(false)}
+      />
+
+      <SavePhraseModal
+        visible={savePhraseModalVisible}
+        onSave={handleSaveCustomPhrase}
+        onClose={() => setSavePhraseModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -287,6 +643,25 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
     fontSize: 12,
     marginTop: 1,
+  },
+  voiceSelectorPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: THEME.borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    flexShrink: 0,
+    maxWidth: 110,
+  },
+  voiceSelectorText: {
+    color: THEME.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -355,13 +730,13 @@ const styles = StyleSheet.create({
   },
   transcriptContent: {
     padding: THEME.spacing.md,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
     paddingHorizontal: THEME.spacing.lg,
   },
   emptyIconCircle: {
@@ -429,7 +804,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: THEME.colors.textPrimary,
-    fontSize: 20, // Min 20px high contrast as required by Section 5.B
+    fontSize: 20, // Min 20px high contrast
     lineHeight: 28,
     fontWeight: '500',
   },
@@ -438,22 +813,150 @@ const styles = StyleSheet.create({
   },
   urduText: {
     fontSize: 22,
-    lineHeight: 36, // lineHeight >= fontSize * 1.6 required for Nastaliq
+    lineHeight: 36, // lineHeight >= fontSize * 1.6 for Nastaliq
     textAlign: 'right',
+  },
+  messageActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  messageActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  messageActionText: {
+    color: THEME.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  quickReplyContainer: {
+    backgroundColor: '#0B1120',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 8,
+  },
+  quickReplyScrollContent: {
+    paddingHorizontal: THEME.spacing.md,
+    gap: 8,
+    alignItems: 'center',
+  },
+  addPhraseChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderWidth: 1.5,
+    borderColor: THEME.colors.conversationAccent,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  addPhraseText: {
+    color: THEME.colors.conversationAccent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  replyChip: {
+    backgroundColor: '#131B2E',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  customReplyChip: {
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    backgroundColor: '#0F1E36',
+  },
+  replyChipUrdu: {
+    color: THEME.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  replyChipEn: {
+    color: THEME.colors.textSecondary,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: THEME.spacing.md,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  textInput: {
+    flex: 1,
+    minHeight: 44,
+    backgroundColor: '#131B2E',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    color: THEME.colors.textPrimary,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  inputActionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speakSendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: THEME.colors.conversationAccent,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 44,
+    justifyContent: 'center',
+  },
+  speakSendButtonDisabled: {
+    backgroundColor: '#1E293B',
+  },
+  speakSendText: {
+    color: '#001E2C',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  speakSendTextDisabled: {
+    color: '#64748B',
   },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: THEME.spacing.md,
-    paddingVertical: 12,
-    backgroundColor: '#0F172A',
+    paddingVertical: 8,
+    backgroundColor: '#090D16',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
     gap: THEME.spacing.sm,
   },
   controlButton: {
     flex: 1,
-    height: 52,
+    height: 48,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -477,8 +980,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   clearButton: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
