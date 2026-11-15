@@ -10,7 +10,7 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     name: 'Fatima',
     language: 'ur',
     pitch: 1.18,
-    rate: 0.92,
+    rate: 0.95,
     gender: 'female',
     regionLabel: 'Urdu (Warm Female)',
     samplePhrase: 'السلام علیکم، میں آپ کی کیا مدد کر سکتی ہوں؟',
@@ -19,10 +19,10 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: 'ur-tariq',
     name: 'Tariq',
     language: 'ur',
-    pitch: 0.78,
+    pitch: 0.58,
     rate: 0.88,
     gender: 'male',
-    regionLabel: 'Urdu (Calm Male)',
+    regionLabel: 'Urdu (Deep Male)',
     samplePhrase: 'السلام علیکم، میں آپ کا معاون ہوں۔',
   },
   {
@@ -39,8 +39,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: 'en-david',
     name: 'David',
     language: 'en',
-    pitch: 0.75,
-    rate: 0.90,
+    pitch: 0.55,
+    rate: 0.88,
     gender: 'male',
     regionLabel: 'English (US Deep)',
     samplePhrase: 'Hello, I am ready to assist you.',
@@ -49,8 +49,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: 'en-emma',
     name: 'Emma',
     language: 'en',
-    pitch: 1.05,
-    rate: 1.04,
+    pitch: 1.10,
+    rate: 1.00,
     gender: 'female',
     regionLabel: 'English (UK Friendly)',
     samplePhrase: 'Good day! Lovely to meet you.',
@@ -59,7 +59,7 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: 'en-oliver',
     name: 'Oliver',
     language: 'en',
-    pitch: 0.85,
+    pitch: 0.60,
     rate: 0.88,
     gender: 'male',
     regionLabel: 'English (UK Warm)',
@@ -136,12 +136,23 @@ function findMatchingVoiceIdentifier(targetLang: string, targetGender: 'female' 
 
   if (langMatches.length === 0) return undefined;
 
-  const genderMatch = langMatches.find((v) =>
-    v.name.toLowerCase().includes(targetGender) ||
-    v.identifier.toLowerCase().includes(targetGender)
-  );
+  const maleKeywords = ['male', 'man', 'boy', 'david', 'daniel', 'george', 'oliver', 'tariq', 'tpd', 'iom', 'iob', 'rjs'];
+  const femaleKeywords = ['female', 'woman', 'girl', 'lady', 'fatima', 'samantha', 'sarah', 'zira', 'sfg', 'fis', 'cfc'];
 
-  return (genderMatch ?? langMatches[0]).identifier;
+  if (targetGender === 'male') {
+    const maleMatch = langMatches.find((v) => {
+      const lower = (v.name + ' ' + v.identifier).toLowerCase();
+      return maleKeywords.some((kw) => lower.includes(kw));
+    });
+    // Return male voice identifier if available; otherwise return undefined so engine doesn't lock to female default
+    return maleMatch?.identifier;
+  } else {
+    const femaleMatch = langMatches.find((v) => {
+      const lower = (v.name + ' ' + v.identifier).toLowerCase();
+      return femaleKeywords.some((kw) => lower.includes(kw));
+    });
+    return (femaleMatch ?? langMatches[0]).identifier;
+  }
 }
 
 /**
