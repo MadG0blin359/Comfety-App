@@ -7,7 +7,7 @@ import {
   setAudioModeAsync,
 } from 'expo-audio';
 import { AUDIO_METERING_CONFIG } from '../constants/config';
-import { transcribeAudio, isUrduScript } from '../services/groqStt';
+import { transcribeAudio, isUrduScript, isAbortOrCancelError, isWhisperHallucination } from '../services/groqStt';
 import { TranscriptItem } from '../types';
 
 interface UseAudioChunkerOptions {
@@ -39,9 +39,12 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
 
   const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDbInChunkRef = useRef<number>(-100);
+  const speechFramesInChunkRef = useRef<number>(0);
   const isPausedForTtsRef = useRef<boolean>(false);
   const isLoopRunningRef = useRef<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const MIN_SPEECH_FRAMES = 3; // At least 300ms of sustained speech energy (filters transient clicks & tap vibrations)
 
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
@@ -52,25 +55,38 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const recorderState = useAudioRecorderState(recorder, 100);
 
   useEffect(() => {
+    // If not actively recording, immediately drop meter to zero and quiet state
+    if (!isRecording) {
+      setCurrentDb(-60);
+      setMeterLevel(0);
+      return;
+    }
+
     if (typeof recorderState.metering === 'number') {
       const db = recorderState.metering;
       setCurrentDb(db);
       maxDbInChunkRef.current = Math.max(maxDbInChunkRef.current, db);
 
+      if (db >= AUDIO_METERING_CONFIG.rmsSilenceThresholdDb) {
+        speechFramesInChunkRef.current += 1;
+      }
+
       // Normalize -60dB .. 0dB to 0.0 .. 1.0 for UI visualizer
       const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
       setMeterLevel(normalized);
     }
-  }, [recorderState.metering]);
+  }, [recorderState.metering, isRecording]);
 
   // Stop current chunk, upload if speech detected, and immediately spin up next chunk
   const cycleAudioChunk = useCallback(async () => {
     if (!isLoopRunningRef.current) return;
 
     try {
-      // 1. Capture completed chunk URI and peak dB
+      // 1. Capture completed chunk URI, peak dB, and speech duration frames
       const peakDb = maxDbInChunkRef.current;
+      const speechFrames = speechFramesInChunkRef.current;
       maxDbInChunkRef.current = -100;
+      speechFramesInChunkRef.current = 0;
 
       await recorder.stop();
       const chunkUri = recorder.uri;
@@ -84,14 +100,14 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
         recorder.record();
       }
 
-      // 3. RMS Silence Gating: Discard chunk if below threshold (free-tier quota safeguard)
+      // 3. RMS Silence & Transient Noise Gating:
+      // Discard chunk if below threshold or if speech energy was too brief (< 300ms)
       if (isPausedForTtsRef.current) {
-        // Discard chunk recorded during TTS to prevent audio echo
         return;
       }
 
-      if (peakDb < AUDIO_METERING_CONFIG.rmsSilenceThresholdDb) {
-        // Silent interval (e.g. ambient pause) — discard locally with zero network calls
+      if (peakDb < AUDIO_METERING_CONFIG.rmsSilenceThresholdDb || speechFrames < MIN_SPEECH_FRAMES) {
+        // Silent interval or transient noise (tap click, haptic buzz) — discard locally with 0 API calls
         return;
       }
 
@@ -107,8 +123,19 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
       const result = await transcribeAudio(chunkUri, { signal: controller.signal });
       const trimmedText = result.text.trim();
 
-      // Filter out empty results and Whisper hallucinations on brief background noise
-      if (trimmedText.length > 0 && !/^[\.\,\?\!\s]+$/.test(trimmedText)) {
+      // Filter out empty results and Whisper hallucinations on silence / brief noise
+      if (trimmedText.length > 0 && !isWhisperHallucination(trimmedText)) {
+        // Discard low-confidence prompt echo on low-energy chunks
+        if (
+          speechFrames < 5 &&
+          (trimmedText === 'سلام علیکم' ||
+            trimmedText === 'السلام علیکم' ||
+            trimmedText === 'یہ کتنے کا ہے؟')
+        ) {
+          console.log('[AudioChunker] Discarded low-confidence prompt echo:', trimmedText);
+          return;
+        }
+
         const newItem: TranscriptItem = {
           id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           text: trimmedText,
@@ -120,8 +147,8 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
         setTranscripts((prev) => [...prev, newItem]);
       }
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes('aborted')) {
-        // Ignored on navigation or manual stop
+      if (isAbortOrCancelError(err) || !isLoopRunningRef.current) {
+        // Ignored on navigation or manual pause/stop. Never surface as error!
         return;
       }
       console.warn('[AudioChunker] Chunk transcription error:', err);
@@ -149,12 +176,21 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
       setIsRecording(true);
       setError(null);
       maxDbInChunkRef.current = -100;
+      speechFramesInChunkRef.current = 0;
 
       await recorder.prepareToRecordAsync({
         ...RecordingPresets.HIGH_QUALITY,
         isMeteringEnabled: true,
       });
       recorder.record();
+
+      // Clear any mechanical tap / haptic vibration spikes from initial 250ms
+      setTimeout(() => {
+        if (isLoopRunningRef.current) {
+          maxDbInChunkRef.current = -100;
+          speechFramesInChunkRef.current = 0;
+        }
+      }, 250);
 
       // Schedule recurring 4000ms chunk boundaries
       if (chunkTimerRef.current) clearInterval(chunkTimerRef.current);
@@ -175,6 +211,9 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
     setIsRecording(false);
     setMeterLevel(0);
     setCurrentDb(-60);
+    setError(null);
+    speechFramesInChunkRef.current = 0;
+    maxDbInChunkRef.current = -100;
 
     if (chunkTimerRef.current) {
       clearInterval(chunkTimerRef.current);

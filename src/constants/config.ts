@@ -40,7 +40,7 @@ export const SENSOR_THRESHOLDS: SensorThresholds = {
 } as const;
 
 export const AUDIO_METERING_CONFIG: AudioMeteringConfig = {
-  rmsSilenceThresholdDb: -45, // Discard intervals quieter than -45dB
+  rmsSilenceThresholdDb: -38, // Discard intervals quieter than -38dB (ambient room noise is -45dB to -60dB)
   chunkDurationMs: 4000,       // Utterance window
 } as const;
 

@@ -359,7 +359,7 @@ export default function ConversationScreen() {
             style={[
               styles.meterFill,
               {
-                width: `${Math.round(meterLevel * 100)}%`,
+                width: isRecording ? `${Math.round(meterLevel * 100)}%` : '0%',
                 backgroundColor:
                   meterLevel > 0.4 ? THEME.colors.conversationAccent : 'rgba(56, 189, 248, 0.5)',
               },
@@ -369,7 +369,7 @@ export default function ConversationScreen() {
 
         {/* Decibel Numerical Readout */}
         <Text style={styles.meterLabel}>
-          {meterLevel > 0.15 ? `${Math.round(currentDb)} dB` : 'Quiet'}
+          {!isRecording ? 'Off' : meterLevel > 0.15 ? `${Math.round(currentDb)} dB` : 'Quiet'}
         </Text>
       </View>
 

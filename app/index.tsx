@@ -1,26 +1,32 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Vibration } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Speech from 'expo-speech';
-import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, Vibration } from "react-native";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Speech from "expo-speech";
+import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { THEME } from '../src/constants/theme';
-import { STORAGE_KEYS } from '../src/constants/config';
+import { THEME } from "../src/constants/theme";
+import { STORAGE_KEYS } from "../src/constants/config";
 import {
   checkPermissionsSnapshot,
   checkMicrophonePermission,
   requestMicrophonePermission,
   checkCameraPermission,
   requestCameraPermission,
-} from '../src/utils/permissions';
-import { AppMode, PermissionsSnapshot } from '../src/types';
-import { Ionicons } from '@expo/vector-icons';
+} from "../src/utils/permissions";
+import { AppMode, PermissionsSnapshot } from "../src/types";
+import { Ionicons } from "@expo/vector-icons";
 
 // Crisp, GPU-rendered vector chevron that never glitches or renders as ''n'
-function ChevronRight({ color = '#001E2C', size = 9 }: { color?: string; size?: number }) {
+function ChevronRight({
+  color = "#001E2C",
+  size = 9,
+}: {
+  color?: string;
+  size?: number;
+}) {
   return (
     <View style={styles.chevronCircle}>
       <View
@@ -42,11 +48,13 @@ export default function HomeScreen() {
   const params = useLocalSearchParams<{ select?: string }>();
   const isNavigatingRef = useRef<boolean>(false);
   const [isScreenFocused, setIsScreenFocused] = useState<boolean>(true);
-  const [isCheckingAutoOpen, setIsCheckingAutoOpen] = useState<boolean>(params.select !== 'true');
+  const [isCheckingAutoOpen, setIsCheckingAutoOpen] = useState<boolean>(
+    params.select !== "true",
+  );
 
   const [permissions, setPermissions] = useState<PermissionsSnapshot>({
-    microphone: { granted: false, canAskAgain: true, status: 'undetermined' },
-    camera: { granted: false, canAskAgain: true, status: 'undetermined' },
+    microphone: { granted: false, canAskAgain: true, status: "undetermined" },
+    camera: { granted: false, canAskAgain: true, status: "undetermined" },
   });
 
   // Startup Sensory Safeguard: Distinct dual-pulse tactile wake-up burst on mount
@@ -55,7 +63,7 @@ export default function HomeScreen() {
     try {
       Vibration.vibrate([0, 180, 280, 180]);
     } catch (err) {
-      console.warn('[Home] Startup vibration failed:', err);
+      console.warn("[Home] Startup vibration failed:", err);
     }
   }, []);
 
@@ -65,23 +73,32 @@ export default function HomeScreen() {
 
     const checkInitialMode = async () => {
       // If user came back to switch modes (?select=true), stay on mode selection screen
-      if (params.select === 'true') {
+      if (params.select === "true") {
         setIsCheckingAutoOpen(false);
         return;
       }
 
       try {
-        const preferredMode = (await AsyncStorage.getItem(STORAGE_KEYS.PREFERRED_MODE)) as AppMode | null;
-        if (isMounted && preferredMode && (preferredMode === 'conversation' || preferredMode === 'guide')) {
-          if (preferredMode === 'conversation') {
-            router.replace('/conversation');
+        const preferredMode = (await AsyncStorage.getItem(
+          STORAGE_KEYS.PREFERRED_MODE,
+        )) as AppMode | null;
+        if (
+          isMounted &&
+          preferredMode &&
+          (preferredMode === "conversation" || preferredMode === "guide")
+        ) {
+          if (preferredMode === "conversation") {
+            router.replace("/conversation");
           } else {
-            router.replace('/guide');
+            router.replace("/guide");
           }
           return;
         }
       } catch (err) {
-        console.warn('[Home] Failed to load preferred mode for auto-open:', err);
+        console.warn(
+          "[Home] Failed to load preferred mode for auto-open:",
+          err,
+        );
       }
 
       if (isMounted) {
@@ -102,7 +119,7 @@ export default function HomeScreen() {
       const snapshot = await checkPermissionsSnapshot();
       setPermissions(snapshot);
     } catch (error) {
-      console.error('[Home] Failed to load permissions:', error);
+      console.error("[Home] Failed to load permissions:", error);
     }
   }, []);
 
@@ -116,35 +133,37 @@ export default function HomeScreen() {
       Speech.stop();
 
       // Tactile confirmation
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => {});
 
       // Save preferred mode memory
       try {
         await AsyncStorage.setItem(STORAGE_KEYS.PREFERRED_MODE, mode);
-        await AsyncStorage.setItem(STORAGE_KEYS.AUTO_OPEN, 'true');
+        await AsyncStorage.setItem(STORAGE_KEYS.AUTO_OPEN, "true");
       } catch (err) {
-        console.error('[Home] Failed to persist preferred mode:', err);
+        console.error("[Home] Failed to persist preferred mode:", err);
       }
 
-      if (mode === 'conversation') {
+      if (mode === "conversation") {
         const micCheck = await checkMicrophonePermission();
         if (!micCheck.granted) {
           await requestMicrophonePermission();
         }
-        router.replace('/conversation');
+        router.replace("/conversation");
       } else {
         const camCheck = await checkCameraPermission();
         if (!camCheck.granted) {
           await requestCameraPermission();
         }
-        router.replace('/guide');
+        router.replace("/guide");
       }
 
       setTimeout(() => {
         isNavigatingRef.current = false;
       }, 500);
     },
-    [router]
+    [router],
   );
 
   // Screen focus lifecycle: speak welcome audio instructions when on selection screen
@@ -154,7 +173,7 @@ export default function HomeScreen() {
       isNavigatingRef.current = false;
 
       // Do not speak intro if directly launching into a mode
-      if (params.select !== 'true' && isCheckingAutoOpen) {
+      if (params.select !== "true" && isCheckingAutoOpen) {
         return;
       }
 
@@ -164,12 +183,12 @@ export default function HomeScreen() {
       Speech.stop();
       const speechTimer = setTimeout(() => {
         Speech.speak(
-          'Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half for Guide Mode.',
+          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half or shake the phone for Guide Mode.",
           {
-            language: 'en',
+            language: "en",
             rate: 0.95,
             pitch: 1.0,
-          }
+          },
         );
       }, 150);
 
@@ -178,7 +197,7 @@ export default function HomeScreen() {
         setIsScreenFocused(false);
         Speech.stop();
       };
-    }, [params.select, isCheckingAutoOpen, refreshPermissions])
+    }, [params.select, isCheckingAutoOpen, refreshPermissions]),
   );
 
   const handlePressIn = () => {
@@ -189,7 +208,7 @@ export default function HomeScreen() {
   if (isCheckingAutoOpen) {
     return (
       <LinearGradient
-        colors={['#0F1626', '#090D16', '#05080E']}
+        colors={["#0F1626", "#090D16", "#05080E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={styles.rootGradient}
@@ -199,7 +218,7 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient
-      colors={['#0F1626', '#090D16', '#05080E']}
+      colors={["#0F1626", "#090D16", "#05080E"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.rootGradient}
@@ -208,10 +227,18 @@ export default function HomeScreen() {
         <View style={styles.container}>
           {/* Minimal Ambient Header */}
           <View style={styles.header}>
-            <Text style={styles.appTitle} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={styles.appTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Comfety
             </Text>
-            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={styles.headerSubtitle}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Assistive Communication & Navigation
             </Text>
           </View>
@@ -224,7 +251,7 @@ export default function HomeScreen() {
               pressed && styles.cardPressed,
             ]}
             onPressIn={handlePressIn}
-            onPress={() => navigateToMode('conversation')}
+            onPress={() => navigateToMode("conversation")}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Conversation Mode. Live Urdu and English captions plus natural voice replies."
@@ -232,7 +259,7 @@ export default function HomeScreen() {
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
-              colors={['#102235', '#0C1826', '#090F17']}
+              colors={["#102235", "#0C1826", "#090F17"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -240,7 +267,11 @@ export default function HomeScreen() {
 
             {/* Ambient Cyan Glow Arc at top-right */}
             <LinearGradient
-              colors={['rgba(56, 189, 248, 0.28)', 'rgba(56, 189, 248, 0.05)', 'transparent']}
+              colors={[
+                "rgba(56, 189, 248, 0.28)",
+                "rgba(56, 189, 248, 0.05)",
+                "transparent",
+              ]}
               start={{ x: 1, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={styles.ambientGlowArc}
@@ -249,12 +280,16 @@ export default function HomeScreen() {
             {/* Top Row: Icon Container & Hardware Badge */}
             <View style={styles.cardTopRow}>
               <LinearGradient
-                colors={['#1E293B', '#0F172A']}
+                colors={["#1E293B", "#0F172A"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.conversationIconBox]}
               >
-                <Ionicons name="chatbubbles-outline" size={24} color="#38BDF8" />
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={24}
+                  color="#38BDF8"
+                />
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
@@ -268,7 +303,9 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  {permissions.microphone.granted ? 'Bilingual AI • Mic Ready' : 'Mic Required'}
+                  {permissions.microphone.granted
+                    ? "Bilingual AI • Mic Ready"
+                    : "Mic Required"}
                 </Text>
               </View>
             </View>
@@ -283,12 +320,14 @@ export default function HomeScreen() {
 
             {/* Bottom Action Affordance Button with Horizontal Gradient */}
             <LinearGradient
-              colors={['#38BDF8', '#0284C7']}
+              colors={["#38BDF8", "#0284C7"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[styles.actionButton, styles.conversationActionGradient]}
             >
-              <Text style={styles.conversationActionText}>Open Conversation</Text>
+              <Text style={styles.conversationActionText}>
+                Open Conversation
+              </Text>
               <ChevronRight color="#001E2C" />
             </LinearGradient>
           </Pressable>
@@ -301,7 +340,7 @@ export default function HomeScreen() {
               pressed && styles.cardPressed,
             ]}
             onPressIn={handlePressIn}
-            onPress={() => navigateToMode('guide')}
+            onPress={() => navigateToMode("guide")}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Guide Mode. Camera obstacle alerts, label reader, and voice assistant."
@@ -309,7 +348,7 @@ export default function HomeScreen() {
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
-              colors={['#0C251C', '#081A12', '#050F0B']}
+              colors={["#0C251C", "#081A12", "#050F0B"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -317,7 +356,11 @@ export default function HomeScreen() {
 
             {/* Ambient Emerald Glow Arc at top-right */}
             <LinearGradient
-              colors={['rgba(52, 211, 153, 0.28)', 'rgba(52, 211, 153, 0.05)', 'transparent']}
+              colors={[
+                "rgba(52, 211, 153, 0.28)",
+                "rgba(52, 211, 153, 0.05)",
+                "transparent",
+              ]}
               start={{ x: 1, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={styles.ambientGlowArc}
@@ -326,7 +369,7 @@ export default function HomeScreen() {
             {/* Top Row: Icon Container & Hardware Badge */}
             <View style={styles.cardTopRow}>
               <LinearGradient
-                colors={['#1E293B', '#0F172A']}
+                colors={["#1E293B", "#0F172A"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.guideIconBox]}
@@ -355,7 +398,9 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  {permissions.camera.granted ? 'Vision AI Ready' : 'Camera Required'}
+                  {permissions.camera.granted
+                    ? "Vision AI Ready"
+                    : "Camera Required"}
                 </Text>
               </View>
             </View>
@@ -370,7 +415,7 @@ export default function HomeScreen() {
 
             {/* Bottom Action Affordance Button with Horizontal Gradient */}
             <LinearGradient
-              colors={['#34D399', '#059669']}
+              colors={["#34D399", "#059669"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[styles.actionButton, styles.guideActionGradient]}
@@ -382,7 +427,7 @@ export default function HomeScreen() {
 
           {/* Ambient Sensory Footer Banner with Gradient */}
           <LinearGradient
-            colors={['#1E293B', '#0F172A']}
+            colors={["#1E293B", "#0F172A"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.footerBanner}
@@ -391,9 +436,12 @@ export default function HomeScreen() {
               <Ionicons name="volume-high-outline" size={22} color="#38BDF8" />
             </View>
             <View style={styles.footerTextContainer}>
-              <Text style={styles.footerTitle}>Spoken Guidance & Direct Mode Touch</Text>
+              <Text style={styles.footerTitle}>
+                Spoken Guidance & Direct Mode Touch
+              </Text>
               <Text style={styles.footerSubtitle}>
-                Speaks automatically • Tap top for Conversation, bottom for Guide
+                Speaks automatically • Tap top for Conversation, bottom for
+                Guide
               </Text>
             </View>
           </LinearGradient>
@@ -414,7 +462,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: THEME.spacing.md,
     paddingBottom: THEME.spacing.sm,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   header: {
     paddingTop: THEME.spacing.xs,
@@ -423,7 +471,7 @@ const styles = StyleSheet.create({
   appTitle: {
     color: THEME.colors.textPrimary,
     fontSize: THEME.typography.sizes.headlineLg,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.5,
   },
   headerSubtitle: {
@@ -435,11 +483,11 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 22,
     padding: THEME.spacing.md,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     marginVertical: THEME.spacing.xs,
     minHeight: 200,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   cardPressed: {
     transform: [{ scale: 0.985 }],
@@ -447,8 +495,8 @@ const styles = StyleSheet.create({
   },
   conversationCard: {
     borderWidth: 2,
-    borderColor: '#38BDF8',
-    shadowColor: '#38BDF8',
+    borderColor: "#38BDF8",
+    shadowColor: "#38BDF8",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
@@ -456,15 +504,15 @@ const styles = StyleSheet.create({
   },
   guideCard: {
     borderWidth: 2,
-    borderColor: '#34D399',
-    shadowColor: '#34D399',
+    borderColor: "#34D399",
+    shadowColor: "#34D399",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
     elevation: 8,
   },
   ambientGlowArc: {
-    position: 'absolute',
+    position: "absolute",
     top: -20,
     right: -20,
     width: 160,
@@ -472,43 +520,43 @@ const styles = StyleSheet.create({
     borderRadius: 80,
   },
   cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     zIndex: 2,
   },
   iconBox: {
     width: 52,
     height: 52,
     borderRadius: THEME.borderRadius.iconBox,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   conversationIconBox: {
     borderWidth: 1.5,
-    borderColor: '#38BDF8',
-    shadowColor: '#38BDF8',
+    borderColor: "#38BDF8",
+    shadowColor: "#38BDF8",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   guideIconBox: {
     borderWidth: 1.5,
-    borderColor: '#34D399',
-    shadowColor: '#34D399',
+    borderColor: "#34D399",
+    shadowColor: "#34D399",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   hardwareBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: THEME.borderRadius.badge,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   pulseIndicatorDot: {
     width: 8,
@@ -518,7 +566,7 @@ const styles = StyleSheet.create({
   },
   hardwareBadgeText: {
     fontSize: THEME.typography.sizes.caption,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.4,
   },
   cardCenterContent: {
@@ -528,7 +576,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: THEME.colors.textPrimary,
     fontSize: THEME.typography.sizes.headlineMd,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.3,
   },
   cardSubtitle: {
@@ -538,15 +586,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   actionButton: {
-    width: '100%',
+    width: "100%",
     height: THEME.touchTargets.actionButton,
     borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: THEME.spacing.md,
     zIndex: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -554,44 +602,44 @@ const styles = StyleSheet.create({
   },
   conversationActionGradient: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopColor: "rgba(255, 255, 255, 0.3)",
   },
   guideActionGradient: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopColor: "rgba(255, 255, 255, 0.3)",
   },
   conversationActionText: {
-    color: '#001E2C',
+    color: "#001E2C",
     fontSize: THEME.typography.sizes.bodyLg,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   guideActionText: {
-    color: '#002114',
+    color: "#002114",
     fontSize: THEME.typography.sizes.bodyLg,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   chevronCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   chevronStem: {
     borderTopWidth: 2.5,
     borderRightWidth: 2.5,
-    transform: [{ rotate: '45deg' }],
+    transform: [{ rotate: "45deg" }],
     marginLeft: -2,
   },
   footerBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    shadowColor: '#000',
+    borderColor: "#334155",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -601,11 +649,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(15, 23, 42, 0.9)",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   footerTextContainer: {
     flex: 1,
@@ -614,7 +662,7 @@ const styles = StyleSheet.create({
   footerTitle: {
     color: THEME.colors.textPrimary,
     fontSize: THEME.typography.sizes.bodyMd,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   footerSubtitle: {
     color: THEME.colors.textSecondary,

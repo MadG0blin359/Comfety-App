@@ -11,6 +11,56 @@ export function isUrduScript(text: string): boolean {
 }
 
 /**
+ * Checks if an error represents a normal fetch abortion or user cancellation.
+ */
+export function isAbortOrCancelError(err: unknown): boolean {
+  if (!err) return false;
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    const name = err.name.toLowerCase();
+    return (
+      name === 'aborterror' ||
+      name === 'cancelederror' ||
+      msg.includes('canceled') ||
+      msg.includes('cancelled') ||
+      msg.includes('aborted') ||
+      msg.includes('abort')
+    );
+  }
+  return false;
+}
+
+/**
+ * Detects known Whisper Large v3 silence/noise hallucination artifacts.
+ */
+export function isWhisperHallucination(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+
+  // Urdu & English music, noise, applause, silence tokens
+  if (/^(\[|\()? *(music|موسیقی|applause|laughter|silence|sound|noise) *(\]|\))?$/i.test(trimmed)) {
+    return true;
+  }
+
+  // Musical notes or punctuation/whitespace-only strings
+  if (/^[♪♫🎵♩\.\,\?\!\:\;\-\_\s]+$/.test(trimmed)) {
+    return true;
+  }
+
+  // Common subtitle credit hallucinations on empty audio
+  if (/^(subtitles?|amara\.org|opensubtitles|translated by|captioned by)/i.test(trimmed)) {
+    return true;
+  }
+
+  // Repeated single characters like "..." or "---"
+  if (/^(.)\1{3,}$/.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Ensures strict minimum interval between consecutive Groq requests
  * to stay safely within free-tier quota ceiling (max 15 RPM, ceiling 20 RPM).
  */
@@ -87,7 +137,9 @@ export async function transcribeAudio(
 
   for (let attempt = 0; attempt <= backoffDelays.length; attempt++) {
     if (options?.signal?.aborted) {
-      throw new Error('Transcription aborted by user or screen navigation.');
+      const abortErr = new Error('Transcription aborted by user or screen navigation.');
+      abortErr.name = 'AbortError';
+      throw abortErr;
     }
 
     try {
@@ -124,8 +176,10 @@ export async function transcribeAudio(
         language: json.language,
       };
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new Error('Transcription aborted.');
+      if (isAbortOrCancelError(err) || options?.signal?.aborted) {
+        const abortErr = new Error('Transcription aborted.');
+        abortErr.name = 'AbortError';
+        throw abortErr;
       }
 
       lastError = err instanceof Error ? err : new Error(String(err));
