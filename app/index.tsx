@@ -9,8 +9,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { THEME } from '../src/constants/theme';
 import { STORAGE_KEYS } from '../src/constants/config';
-import { checkPermissionsSnapshot, requestMicrophonePermission, requestCameraPermission } from '../src/utils/permissions';
-import { useShakeGesture } from '../src/hooks/useShakeGesture';
+import {
+  checkPermissionsSnapshot,
+  checkMicrophonePermission,
+  requestMicrophonePermission,
+  checkCameraPermission,
+  requestCameraPermission,
+} from '../src/utils/permissions';
 import { AppMode, PermissionsSnapshot } from '../src/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,6 +42,7 @@ export default function HomeScreen() {
   const params = useLocalSearchParams<{ select?: string }>();
   const isNavigatingRef = useRef<boolean>(false);
   const [isScreenFocused, setIsScreenFocused] = useState<boolean>(true);
+  const [isCheckingAutoOpen, setIsCheckingAutoOpen] = useState<boolean>(params.select !== 'true');
 
   const [permissions, setPermissions] = useState<PermissionsSnapshot>({
     microphone: { granted: false, canAskAgain: true, status: 'undetermined' },
@@ -45,7 +51,6 @@ export default function HomeScreen() {
 
   // Startup Sensory Safeguard: Distinct dual-pulse tactile wake-up burst on mount
   // Guarantees blind users physically feel Comfety wake up even if media volume is at 0%
-  // 180ms pulse, 280ms pause, 180ms pulse ensures two unmistakable tactile beats
   useEffect(() => {
     try {
       Vibration.vibrate([0, 180, 280, 180]);
@@ -53,6 +58,43 @@ export default function HomeScreen() {
       console.warn('[Home] Startup vibration failed:', err);
     }
   }, []);
+
+  // Direct start from the exact mode previously used after splash screen
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkInitialMode = async () => {
+      // If user came back to switch modes (?select=true), stay on mode selection screen
+      if (params.select === 'true') {
+        setIsCheckingAutoOpen(false);
+        return;
+      }
+
+      try {
+        const preferredMode = (await AsyncStorage.getItem(STORAGE_KEYS.PREFERRED_MODE)) as AppMode | null;
+        if (isMounted && preferredMode && (preferredMode === 'conversation' || preferredMode === 'guide')) {
+          if (preferredMode === 'conversation') {
+            router.replace('/conversation');
+          } else {
+            router.replace('/guide');
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('[Home] Failed to load preferred mode for auto-open:', err);
+      }
+
+      if (isMounted) {
+        setIsCheckingAutoOpen(false);
+      }
+    };
+
+    checkInitialMode();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [params.select, router]);
 
   // Query permissions state on mount and focus
   const refreshPermissions = useCallback(async () => {
@@ -65,99 +107,95 @@ export default function HomeScreen() {
   }, []);
 
   // Safe navigation that halts active speech and emits tactile feedback
-  const navigateToMode = useCallback(async (mode: AppMode) => {
-    if (isNavigatingRef.current) return;
-    isNavigatingRef.current = true;
+  const navigateToMode = useCallback(
+    async (mode: AppMode) => {
+      if (isNavigatingRef.current) return;
+      isNavigatingRef.current = true;
 
-    // Immediately stop any active onboarding announcement
-    Speech.stop();
+      // Immediately stop any active onboarding announcement
+      Speech.stop();
 
-    // Tactile confirmation
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Tactile confirmation
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
-    // Save preferred mode memory
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.PREFERRED_MODE, mode);
-    } catch (err) {
-      console.error('[Home] Failed to persist preferred mode:', err);
-    }
-
-    if (mode === 'conversation') {
-      if (!permissions.microphone.granted) {
-        await requestMicrophonePermission();
+      // Save preferred mode memory
+      try {
+        await AsyncStorage.setItem(STORAGE_KEYS.PREFERRED_MODE, mode);
+        await AsyncStorage.setItem(STORAGE_KEYS.AUTO_OPEN, 'true');
+      } catch (err) {
+        console.error('[Home] Failed to persist preferred mode:', err);
       }
-      router.push('/conversation');
-    } else {
-      if (!permissions.camera.granted) {
-        await requestCameraPermission();
+
+      if (mode === 'conversation') {
+        const micCheck = await checkMicrophonePermission();
+        if (!micCheck.granted) {
+          await requestMicrophonePermission();
+        }
+        router.replace('/conversation');
+      } else {
+        const camCheck = await checkCameraPermission();
+        if (!camCheck.granted) {
+          await requestCameraPermission();
+        }
+        router.replace('/guide');
       }
-      router.push('/guide');
-    }
 
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 500);
-  }, [permissions, router]);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
+    },
+    [router]
+  );
 
-  // Screen focus lifecycle: handle speech onboarding & shake listener
+  // Screen focus lifecycle: speak welcome audio instructions when on selection screen
   useFocusEffect(
     useCallback(() => {
       setIsScreenFocused(true);
       isNavigatingRef.current = false;
+
+      // Do not speak intro if directly launching into a mode
+      if (params.select !== 'true' && isCheckingAutoOpen) {
+        return;
+      }
+
       refreshPermissions();
 
-      const runOnboardingAndAutoOpen = async () => {
-        try {
-          const autoOpen = await AsyncStorage.getItem(STORAGE_KEYS.AUTO_OPEN);
-          const preferredMode = await AsyncStorage.getItem(STORAGE_KEYS.PREFERRED_MODE) as AppMode | null;
-
-          // If autoOpen is set and not bypassed by ?select=true, route immediately
-          if (autoOpen === 'true' && preferredMode && params.select !== 'true') {
-            navigateToMode(preferredMode);
-            return;
+      // Clear any prior speech and announce instructions with a small buffer for Android TTS readiness
+      Speech.stop();
+      const speechTimer = setTimeout(() => {
+        Speech.speak(
+          'Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half for Guide Mode.',
+          {
+            language: 'en',
+            rate: 0.95,
+            pitch: 1.0,
           }
-
-          // Otherwise, speak immediate welcome audio
-          Speech.stop();
-          Speech.speak(
-            'Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.',
-            {
-              language: 'en-US',
-              rate: 0.95,
-              pitch: 1.0,
-            }
-          );
-        } catch (error) {
-          console.error('[Home] Auto-open check failed:', error);
-        }
-      };
-
-      runOnboardingAndAutoOpen();
+        );
+      }, 150);
 
       return () => {
+        clearTimeout(speechTimer);
         setIsScreenFocused(false);
         Speech.stop();
       };
-    }, [params.select, navigateToMode, refreshPermissions])
+    }, [params.select, isCheckingAutoOpen, refreshPermissions])
   );
-
-  // No-Look Blind Entry 1: Double Shake (> 2.1g within 1000ms) launches Guide Mode
-  useShakeGesture({
-    enabled: isScreenFocused,
-    onShake: () => {
-      navigateToMode('guide');
-    },
-  });
-
-  // Universal Long Press (2000ms anywhere on screen) launches Guide Mode (Section 5.A.4)
-  const handleUniversalLongPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    navigateToMode('guide');
-  };
 
   const handlePressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
+
+  // Render ambient background while reading initial mode to prevent card flash
+  if (isCheckingAutoOpen) {
+    return (
+      <LinearGradient
+        colors={['#0F1626', '#090D16', '#05080E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.rootGradient}
+      />
+    );
+  }
 
   return (
     <LinearGradient
@@ -170,8 +208,12 @@ export default function HomeScreen() {
         <View style={styles.container}>
           {/* Minimal Ambient Header */}
           <View style={styles.header}>
-            <Text style={styles.appTitle} numberOfLines={1} ellipsizeMode="tail">Comfety</Text>
-            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">Assistive Communication & Navigation</Text>
+            <Text style={styles.appTitle} numberOfLines={1} ellipsizeMode="tail">
+              Comfety
+            </Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+              Assistive Communication & Navigation
+            </Text>
           </View>
 
           {/* 50/50 Viewport Split: Card 1 (Conversation Mode) */}
@@ -183,12 +225,10 @@ export default function HomeScreen() {
             ]}
             onPressIn={handlePressIn}
             onPress={() => navigateToMode('conversation')}
-            delayLongPress={2000}
-            onLongPress={handleUniversalLongPress}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Conversation Mode. Live Urdu and English captions plus natural voice replies."
-            accessibilityHint="Double tap to open Conversation Mode, or hold for two seconds to start Guide Mode."
+            accessibilityHint="Tap to open Conversation Mode."
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
@@ -218,10 +258,16 @@ export default function HomeScreen() {
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
-                <Text style={[
-                  styles.hardwareBadgeText,
-                  { color: permissions.microphone.granted ? THEME.colors.conversationAccent : THEME.colors.warning }
-                ]}>
+                <Text
+                  style={[
+                    styles.hardwareBadgeText,
+                    {
+                      color: permissions.microphone.granted
+                        ? THEME.colors.conversationAccent
+                        : THEME.colors.warning,
+                    },
+                  ]}
+                >
                   {permissions.microphone.granted ? 'Bilingual AI • Mic Ready' : 'Mic Required'}
                 </Text>
               </View>
@@ -256,12 +302,10 @@ export default function HomeScreen() {
             ]}
             onPressIn={handlePressIn}
             onPress={() => navigateToMode('guide')}
-            delayLongPress={2000}
-            onLongPress={handleUniversalLongPress}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Guide Mode. Camera obstacle alerts, label reader, and voice assistant."
-            accessibilityHint="Double tap to open Guide Mode, or hold for two seconds to start Guide Mode."
+            accessibilityHint="Tap to open Guide Mode."
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
@@ -291,14 +335,26 @@ export default function HomeScreen() {
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
-                <View style={[
-                  styles.pulseIndicatorDot,
-                  { backgroundColor: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
-                ]} />
-                <Text style={[
-                  styles.hardwareBadgeText,
-                  { color: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
-                ]}>
+                <View
+                  style={[
+                    styles.pulseIndicatorDot,
+                    {
+                      backgroundColor: permissions.camera.granted
+                        ? THEME.colors.guideAccent
+                        : THEME.colors.warning,
+                    },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.hardwareBadgeText,
+                    {
+                      color: permissions.camera.granted
+                        ? THEME.colors.guideAccent
+                        : THEME.colors.warning,
+                    },
+                  ]}
+                >
                   {permissions.camera.granted ? 'Vision AI Ready' : 'Camera Required'}
                 </Text>
               </View>
@@ -335,9 +391,9 @@ export default function HomeScreen() {
               <Ionicons name="volume-high-outline" size={22} color="#38BDF8" />
             </View>
             <View style={styles.footerTextContainer}>
-              <Text style={styles.footerTitle}>Auto-Voice & No-Look Entry</Text>
+              <Text style={styles.footerTitle}>Spoken Guidance & Direct Mode Touch</Text>
               <Text style={styles.footerSubtitle}>
-                Speaks automatically • Hold anywhere (2s) or shake to start Guide
+                Speaks automatically • Tap top for Conversation, bottom for Guide
               </Text>
             </View>
           </LinearGradient>

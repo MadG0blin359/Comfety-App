@@ -11,7 +11,7 @@ export default function GuideScreen() {
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
+    router.replace('/?select=true');
   };
 
   return (

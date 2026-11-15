@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Modal,
   View,
@@ -6,13 +6,13 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { THEME } from '../constants/theme';
-import { isUrduScript } from '../services/groqStt';
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { THEME } from "../constants/theme";
+import { isUrduScript } from "../services/groqStt";
 
 interface CounterDisplayModalProps {
   visible: boolean;
@@ -54,8 +54,12 @@ export const CounterDisplayModal: React.FC<CounterDisplayModalProps> = ({
         {/* Top Header Controls */}
         <View style={styles.header}>
           <View style={styles.counterBadge}>
-            <Ionicons name="card-outline" size={18} color={THEME.colors.conversationAccent} />
-            <Text style={styles.counterBadgeText}>COUNTER DISPLAY (40px)</Text>
+            <Ionicons
+              name="card-outline"
+              size={18}
+              color={THEME.colors.conversationAccent}
+            />
+            <Text style={styles.counterBadgeText}>COUNTER DISPLAY</Text>
           </View>
 
           <Pressable
@@ -72,9 +76,14 @@ export const CounterDisplayModal: React.FC<CounterDisplayModalProps> = ({
 
         {/* Counter Orientation Hint */}
         <View style={styles.hintBanner}>
-          <Ionicons name="phone-portrait-outline" size={16} color={THEME.colors.textSecondary} />
+          <Ionicons
+            name="phone-portrait-outline"
+            size={16}
+            color={THEME.colors.textSecondary}
+          />
           <Text style={styles.hintText}>
-            Show this screen to the counter clerk, doctor, or teller in noisy spaces.
+            Show this screen to the counter clerk, doctor, or teller in noisy
+            spaces.
           </Text>
         </View>
 
@@ -128,48 +137,48 @@ export const CounterDisplayModal: React.FC<CounterDisplayModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingBottom: 8,
   },
   counterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderColor: "rgba(56, 189, 248, 0.3)",
   },
   counterBadgeText: {
     color: THEME.colors.conversationAccent,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.8,
   },
   closeButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#1E293B',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#1E293B",
+    alignItems: "center",
+    justifyContent: "center",
   },
   hintBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#111827',
+    backgroundColor: "#111827",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -180,65 +189,65 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: THEME.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   contentScroll: {
     flex: 1,
   },
   contentContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingVertical: 24,
   },
   counterText: {
     fontSize: 40,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: "800",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
   },
   englishCounterText: {
     lineHeight: 52,
-    textAlign: 'left',
+    textAlign: "left",
   },
   urduCounterText: {
     lineHeight: 68,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    textAlign: "right",
+    writingDirection: "rtl",
   },
   bottomBar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: "#1E293B",
   },
   speakButton: {
     flex: 1,
     minHeight: 52,
     backgroundColor: THEME.colors.conversationAccent,
     borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   speakButtonText: {
-    color: '#001E2C',
+    color: "#001E2C",
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dismissButton: {
     minWidth: 100,
     minHeight: 52,
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
   },
   dismissButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

@@ -125,7 +125,7 @@ export default function ConversationScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
     stopRecording();
-    router.back();
+    router.replace('/?select=true');
   };
 
   const toggleRecording = () => {
@@ -482,7 +482,7 @@ export default function ConversationScreen() {
               contentContainerStyle={styles.quickReplyScrollContent}
               keyboardShouldPersistTaps="handled"
             >
-              {/* + Save Phrase Trigger Chip */}
+              {/* Save Phrase Trigger Chip */}
               <Pressable
                 style={styles.addPhraseChip}
                 onPress={() => {
@@ -494,7 +494,7 @@ export default function ConversationScreen() {
                 accessibilityLabel="Add custom phrase"
               >
                 <Ionicons name="add" size={18} color={THEME.colors.conversationAccent} />
-                <Text style={styles.addPhraseText}>+ Save Phrase</Text>
+                <Text style={styles.addPhraseText}>Save Phrase</Text>
               </Pressable>
 
               {/* Quick-Reply Chips */}
