@@ -43,17 +43,44 @@ export async function transcribeAudio(
 
   await enforceRateLimitInterval();
 
-  const formData = new FormData();
-  formData.append('file', {
-    uri: audioUri,
-    type: 'audio/m4a',
-    name: 'audio.m4a',
-  } as unknown as Blob);
+  // Read recorded audio chunk into bytes for Expo WinterCG-compliant fetch FormData
+  let bytes: Uint8Array;
+  try {
+    const fileRes = await fetch(audioUri);
+    if (!fileRes.ok) {
+      throw new Error(`Failed to read audio file (${fileRes.status}): ${fileRes.statusText}`);
+    }
+    const arrayBuffer = await fileRes.arrayBuffer();
+    bytes = new Uint8Array(arrayBuffer);
+  } catch (readErr) {
+    throw new Error(
+      `Unable to read recorded audio chunk: ${
+        readErr instanceof Error ? readErr.message : String(readErr)
+      }`
+    );
+  }
 
-  formData.append('model', APP_CONFIG.groq.model);
-  formData.append('prompt', APP_CONFIG.groq.prompt);
-  formData.append('response_format', 'json');
-  formData.append('temperature', '0.0');
+  // If audio chunk is completely empty, skip API call to save quota
+  if (bytes.byteLength === 0) {
+    return { text: '' };
+  }
+
+  // Helper to build fresh FormData instance with byte-streamable part for each attempt
+  const buildFormData = (): FormData => {
+    const formData = new FormData();
+    const audioPart = {
+      name: 'audio.m4a',
+      type: 'audio/m4a',
+      bytes: () => bytes,
+    };
+
+    formData.append('file', audioPart as unknown as Blob);
+    formData.append('model', APP_CONFIG.groq.model);
+    formData.append('prompt', APP_CONFIG.groq.prompt);
+    formData.append('response_format', 'json');
+    formData.append('temperature', '0.0');
+    return formData;
+  };
 
   const backoffDelays = APP_CONFIG.groq.rateLimit.retryBackoffMs;
   let lastError: Error | null = null;
@@ -69,7 +96,7 @@ export async function transcribeAudio(
         headers: {
           Authorization: `Bearer ${ENV_CONFIG.GROQ_API_KEY}`,
         },
-        body: formData,
+        body: buildFormData(),
         signal: options?.signal,
       });
 
