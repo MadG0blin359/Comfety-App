@@ -567,9 +567,12 @@ export default function ConversationScreen() {
             </Pressable>
           )}
 
-          {/* Speak Button: Instant Zero-Delay Vocalization with Neon Gradient */}
+          {/* Speak Button: Instant Zero-Delay Vocalization */}
           <Pressable
-            style={styles.speakSendWrapper}
+            style={({ pressed }) => [
+              styles.speakSendPressable,
+              pressed && inputText.trim() && styles.buttonPressed,
+            ]}
             onPress={handleSendTypedReply}
             disabled={!inputText.trim()}
             accessible={true}
@@ -586,7 +589,9 @@ export default function ConversationScreen() {
               end={{ x: 1, y: 0 }}
               style={[
                 styles.speakSendButton,
-                inputText.trim() ? styles.speakSendNeonGlow : styles.speakSendButtonDisabled,
+                inputText.trim()
+                  ? styles.conversationButtonGradient
+                  : styles.speakSendButtonDisabled,
               ]}
             >
               <Ionicons
@@ -610,7 +615,10 @@ export default function ConversationScreen() {
         {!isKeyboardOpen && (
           <View style={styles.bottomBar}>
             <Pressable
-              style={styles.controlButtonWrapper}
+              style={({ pressed }) => [
+                styles.controlButtonPressable,
+                pressed && styles.buttonPressed,
+              ]}
               onPress={toggleRecording}
               accessible={true}
               accessibilityRole="button"
@@ -619,14 +627,14 @@ export default function ConversationScreen() {
               <LinearGradient
                 colors={
                   isRecording
-                    ? ['#EF4444', '#DC2626', '#991B1B']
-                    : ['#38BDF8', '#0284C7', '#0369A1']
+                    ? ['#EF4444', '#DC2626']
+                    : ['#38BDF8', '#0284C7']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
                   styles.controlButton,
-                  isRecording ? styles.pauseNeonGlow : styles.resumeNeonGlow,
+                  isRecording ? styles.pauseActionGradient : styles.conversationActionGradient,
                 ]}
               >
                 <Ionicons
@@ -647,7 +655,10 @@ export default function ConversationScreen() {
 
             {transcripts.length > 0 && (
               <Pressable
-                style={styles.clearButton}
+                style={({ pressed }) => [
+                  styles.clearButton,
+                  pressed && styles.buttonPressed,
+                ]}
                 onPress={handleClear}
                 accessible={true}
                 accessibilityRole="button"
@@ -1006,9 +1017,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  speakSendWrapper: {
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.92,
+  },
+  speakSendPressable: {
     borderRadius: 12,
-    overflow: 'hidden',
   },
   speakSendButton: {
     flexDirection: 'row',
@@ -1019,18 +1033,19 @@ const styles = StyleSheet.create({
     height: 46,
     justifyContent: 'center',
   },
-  speakSendNeonGlow: {
-    shadowColor: '#38BDF8',
+  conversationButtonGradient: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.4)',
   },
   speakSendButtonDisabled: {
     backgroundColor: '#1E293B',
-    opacity: 0.6,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
   speakSendText: {
     color: '#001E2C',
@@ -1044,49 +1059,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: THEME.spacing.md,
-    paddingVertical: 8,
+    paddingVertical: 10,
     backgroundColor: '#090D16',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
     gap: THEME.spacing.sm,
   },
-  controlButtonWrapper: {
+  controlButtonPressable: {
     flex: 1,
     borderRadius: 14,
-    overflow: 'hidden',
   },
   controlButton: {
     width: '100%',
-    height: 48,
+    height: 50,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: THEME.spacing.sm,
-  },
-  resumeNeonGlow: {
-    shadowColor: '#38BDF8',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 6,
-    borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.5)',
   },
-  pauseNeonGlow: {
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    elevation: 6,
-    borderWidth: 1.5,
-    borderColor: 'rgba(239, 68, 68, 0.5)',
+  conversationActionGradient: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.35)',
   },
-  resumeButton: {
-    backgroundColor: THEME.colors.conversationAccent,
-  },
-  pauseButton: {
-    backgroundColor: 'rgba(239, 68, 68, 0.85)',
+  pauseActionGradient: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.35)',
   },
   controlButtonText: {
     fontSize: THEME.typography.sizes.bodyLg,
@@ -1099,11 +1102,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   clearButton: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
