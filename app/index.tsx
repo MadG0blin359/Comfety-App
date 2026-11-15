@@ -12,7 +12,7 @@ import { STORAGE_KEYS } from '../src/constants/config';
 import { checkPermissionsSnapshot, requestMicrophonePermission, requestCameraPermission } from '../src/utils/permissions';
 import { useShakeGesture } from '../src/hooks/useShakeGesture';
 import { AppMode, PermissionsSnapshot } from '../src/types';
-import { HearingIcon, MicIcon, VisionEyeIcon, RadarBeaconIcon, SpeakerWaveIcon } from '../src/components/icons/HomeIcons';
+import { Ionicons } from '@expo/vector-icons';
 
 // Crisp, GPU-rendered vector chevron that never glitches or renders as ''n'
 function ChevronRight({ color = '#001E2C', size = 9 }: { color?: string; size?: number }) {
@@ -170,13 +170,7 @@ export default function HomeScreen() {
         <View style={styles.container}>
           {/* Minimal Ambient Header */}
           <View style={styles.header}>
-            <View style={styles.headerTitleRow}>
-              <Text style={styles.appTitle}>Comfety</Text>
-              <View style={styles.readyBadge}>
-                <View style={styles.readyDot} />
-                <Text style={styles.readyBadgeText}>Ready</Text>
-              </View>
-            </View>
+            <Text style={styles.appTitle}>Comfety</Text>
             <Text style={styles.headerSubtitle}>Assistive Communication & Navigation</Text>
           </View>
 
@@ -220,7 +214,7 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.conversationIconBox]}
               >
-                <HearingIcon size={26} color="#38BDF8" />
+                <Ionicons name="chatbubbles-outline" size={24} color="#38BDF8" />
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
@@ -248,10 +242,7 @@ export default function HomeScreen() {
               end={{ x: 1, y: 0 }}
               style={[styles.actionButton, styles.conversationActionGradient]}
             >
-              <View style={styles.actionButtonContent}>
-                <MicIcon size={18} color="#001E2C" />
-                <Text style={[styles.conversationActionText, { marginLeft: 8 }]}>Open Conversation</Text>
-              </View>
+              <Text style={styles.conversationActionText}>Open Conversation</Text>
               <ChevronRight color="#001E2C" />
             </LinearGradient>
           </Pressable>
@@ -296,7 +287,7 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.guideIconBox]}
               >
-                <VisionEyeIcon size={26} color="#34D399" />
+                <Ionicons name="eye-outline" size={24} color="#34D399" />
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
@@ -328,10 +319,7 @@ export default function HomeScreen() {
               end={{ x: 1, y: 0 }}
               style={[styles.actionButton, styles.guideActionGradient]}
             >
-              <View style={styles.actionButtonContent}>
-                <RadarBeaconIcon size={18} color="#002114" />
-                <Text style={[styles.guideActionText, { marginLeft: 8 }]}>Start Guide Mode</Text>
-              </View>
+              <Text style={styles.guideActionText}>Start Guide Mode</Text>
               <ChevronRight color="#002114" />
             </LinearGradient>
           </Pressable>
@@ -344,7 +332,7 @@ export default function HomeScreen() {
             style={styles.footerBanner}
           >
             <View style={styles.footerIconContainer}>
-              <SpeakerWaveIcon size={22} color="#38BDF8" />
+              <Ionicons name="volume-high-outline" size={22} color="#38BDF8" />
             </View>
             <View style={styles.footerTextContainer}>
               <Text style={styles.footerTitle}>Auto-Voice & No-Look Entry</Text>
@@ -376,36 +364,11 @@ const styles = StyleSheet.create({
     paddingTop: THEME.spacing.xs,
     paddingBottom: THEME.spacing.sm,
   },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: THEME.spacing.sm,
-  },
   appTitle: {
     color: THEME.colors.textPrimary,
     fontSize: THEME.typography.sizes.headlineLg,
     fontWeight: '700',
     letterSpacing: -0.5,
-  },
-  readyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.surfaceContainerHigh,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: THEME.borderRadius.full,
-  },
-  readyDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: THEME.colors.safe,
-    marginRight: 6,
-  },
-  readyBadgeText: {
-    color: THEME.colors.safe,
-    fontSize: THEME.typography.sizes.caption,
-    fontWeight: '600',
   },
   headerSubtitle: {
     color: THEME.colors.textSecondary,
@@ -540,10 +503,6 @@ const styles = StyleSheet.create({
   guideActionGradient: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  actionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   conversationActionText: {
     color: '#001E2C',
