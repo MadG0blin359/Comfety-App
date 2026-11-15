@@ -3,7 +3,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setAudioModeAsync } from 'expo-audio';
+import * as SplashScreen from 'expo-splash-screen';
 import { THEME } from '../src/constants/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   useEffect(() => {
@@ -13,6 +16,8 @@ export default function RootLayout() {
     }).catch((err: unknown) => {
       console.warn('[RootLayout] Audio mode configuration warning:', err);
     });
+
+    SplashScreen.hideAsync().catch(() => {});
   }, []);
 
   return (

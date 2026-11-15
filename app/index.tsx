@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Vibration } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +12,24 @@ import { STORAGE_KEYS } from '../src/constants/config';
 import { checkPermissionsSnapshot, requestMicrophonePermission, requestCameraPermission } from '../src/utils/permissions';
 import { useShakeGesture } from '../src/hooks/useShakeGesture';
 import { AppMode, PermissionsSnapshot } from '../src/types';
+
+// Crisp, GPU-rendered vector chevron that never glitches or renders as ''n'
+function ChevronRight({ color = '#001E2C', size = 9 }: { color?: string; size?: number }) {
+  return (
+    <View style={styles.chevronCircle}>
+      <View
+        style={[
+          styles.chevronStem,
+          {
+            width: size,
+            height: size,
+            borderColor: color,
+          },
+        ]}
+      />
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -62,13 +81,11 @@ export default function HomeScreen() {
     }
 
     if (mode === 'conversation') {
-      // Pre-check microphone
       if (!permissions.microphone.granted) {
         await requestMicrophonePermission();
       }
       router.push('/conversation');
     } else {
-      // Pre-check camera
       if (!permissions.camera.granted) {
         await requestCameraPermission();
       }
@@ -98,13 +115,14 @@ export default function HomeScreen() {
             return;
           }
 
-          // Spoken Onboarding Announcement (Section 5.A.2)
+          // Otherwise, speak immediate welcome audio
           Speech.stop();
           Speech.speak(
             'Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.',
             {
-              language: 'en',
+              language: 'en-US',
               rate: 0.95,
+              pitch: 1.0,
             }
           );
         } catch (error) {
@@ -140,146 +158,214 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Minimal Ambient Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            <Text style={styles.appTitle}>Comfety</Text>
-            <View style={styles.readyBadge}>
-              <View style={styles.readyDot} />
-              <Text style={styles.readyBadgeText}>Ready</Text>
+    <LinearGradient
+      colors={['#0F1626', '#090D16', '#05080E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.rootGradient}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          {/* Minimal Ambient Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.appTitle}>Comfety</Text>
+              <View style={styles.readyBadge}>
+                <View style={styles.readyDot} />
+                <Text style={styles.readyBadgeText}>Ready</Text>
+              </View>
             </View>
+            <Text style={styles.headerSubtitle}>Assistive Communication & Navigation</Text>
           </View>
-          <Text style={styles.headerSubtitle}>Assistive Communication & Navigation</Text>
-        </View>
 
-        {/* 50/50 Viewport Split: Card 1 (Conversation Mode) */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.modeCard,
-            styles.conversationCard,
-            pressed && styles.cardPressed,
-          ]}
-          onPressIn={handlePressIn}
-          onPress={() => navigateToMode('conversation')}
-          delayLongPress={2000}
-          onLongPress={handleUniversalLongPress}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Conversation Mode. Live Urdu and English captions plus natural voice replies."
-          accessibilityHint="Double tap to open Conversation Mode, or hold for two seconds to start Guide Mode."
-        >
-          {/* Top Row: Icon Container & Hardware Badge */}
-          <View style={styles.cardTopRow}>
-            <View style={[styles.iconBox, styles.conversationIconBox]}>
-              <Text style={styles.iconGlyph}>👂</Text>
+          {/* 50/50 Viewport Split: Card 1 (Conversation Mode) */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.modeCard,
+              styles.conversationCard,
+              pressed && styles.cardPressed,
+            ]}
+            onPressIn={handlePressIn}
+            onPress={() => navigateToMode('conversation')}
+            delayLongPress={2000}
+            onLongPress={handleUniversalLongPress}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Conversation Mode. Live Urdu and English captions plus natural voice replies."
+            accessibilityHint="Double tap to open Conversation Mode, or hold for two seconds to start Guide Mode."
+          >
+            {/* Dark Linear Gradient Background */}
+            <LinearGradient
+              colors={['#102235', '#0C1826', '#090F17']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* Ambient Cyan Glow Arc at top-right */}
+            <LinearGradient
+              colors={['rgba(56, 189, 248, 0.28)', 'rgba(56, 189, 248, 0.05)', 'transparent']}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.ambientGlowArc}
+            />
+
+            {/* Top Row: Icon Container & Hardware Badge */}
+            <View style={styles.cardTopRow}>
+              <LinearGradient
+                colors={['#1E293B', '#0F172A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.iconBox, styles.conversationIconBox]}
+              >
+                <Text style={styles.iconGlyph}>👂</Text>
+              </LinearGradient>
+
+              <View style={styles.hardwareBadge}>
+                <Text style={[
+                  styles.hardwareBadgeText,
+                  { color: permissions.microphone.granted ? THEME.colors.conversationAccent : THEME.colors.warning }
+                ]}>
+                  {permissions.microphone.granted ? 'Bilingual AI • Mic Ready' : 'Mic Required'}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.hardwareBadge}>
-              <Text style={[
-                styles.hardwareBadgeText,
-                { color: permissions.microphone.granted ? THEME.colors.conversationAccent : THEME.colors.warning }
-              ]}>
-                {permissions.microphone.granted ? 'Bilingual AI • Mic Ready' : 'Mic Required'}
+            {/* Center Content: Title & Description */}
+            <View style={styles.cardCenterContent}>
+              <Text style={styles.cardTitle}>Conversation Mode</Text>
+              <Text style={styles.cardSubtitle}>
+                Live Urdu & English captions + natural voice replies
               </Text>
             </View>
-          </View>
 
-          {/* Center Content: Title & Description */}
-          <View style={styles.cardCenterContent}>
-            <Text style={styles.cardTitle}>Conversation Mode</Text>
-            <Text style={styles.cardSubtitle}>
-              Live Urdu & English captions + natural voice replies
-            </Text>
-          </View>
+            {/* Bottom Action Affordance Button with Horizontal Gradient */}
+            <LinearGradient
+              colors={['#38BDF8', '#0284C7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.actionButton, styles.conversationActionGradient]}
+            >
+              <View style={styles.actionButtonContent}>
+                <Text style={styles.actionButtonIcon}>🎙️</Text>
+                <Text style={styles.conversationActionText}>Open Conversation</Text>
+              </View>
+              <ChevronRight color="#001E2C" />
+            </LinearGradient>
+          </Pressable>
 
-          {/* Bottom Action Affordance Button */}
-          <View style={[styles.actionButton, styles.conversationActionButton]}>
-            <View style={styles.actionButtonContent}>
-              <Text style={styles.actionButtonIcon}>🎙️</Text>
-              <Text style={styles.conversationActionText}>Open Conversation</Text>
+          {/* 50/50 Viewport Split: Card 2 (Guide Mode) */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.modeCard,
+              styles.guideCard,
+              pressed && styles.cardPressed,
+            ]}
+            onPressIn={handlePressIn}
+            onPress={() => navigateToMode('guide')}
+            delayLongPress={2000}
+            onLongPress={handleUniversalLongPress}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Guide Mode. Camera obstacle alerts, label reader, and voice assistant."
+            accessibilityHint="Double tap to open Guide Mode, or hold for two seconds to start Guide Mode."
+          >
+            {/* Dark Linear Gradient Background */}
+            <LinearGradient
+              colors={['#0C251C', '#081A12', '#050F0B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* Ambient Emerald Glow Arc at top-right */}
+            <LinearGradient
+              colors={['rgba(52, 211, 153, 0.28)', 'rgba(52, 211, 153, 0.05)', 'transparent']}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.ambientGlowArc}
+            />
+
+            {/* Top Row: Icon Container & Hardware Badge */}
+            <View style={styles.cardTopRow}>
+              <LinearGradient
+                colors={['#1E293B', '#0F172A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.iconBox, styles.guideIconBox]}
+              >
+                <Text style={styles.iconGlyph}>👁️</Text>
+              </LinearGradient>
+
+              <View style={styles.hardwareBadge}>
+                <View style={[
+                  styles.pulseIndicatorDot,
+                  { backgroundColor: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
+                ]} />
+                <Text style={[
+                  styles.hardwareBadgeText,
+                  { color: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
+                ]}>
+                  {permissions.camera.granted ? 'Vision AI Ready' : 'Camera Required'}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.actionArrow}>→</Text>
-          </View>
-        </Pressable>
 
-        {/* 50/50 Viewport Split: Card 2 (Guide Mode) */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.modeCard,
-            styles.guideCard,
-            pressed && styles.cardPressed,
-          ]}
-          onPressIn={handlePressIn}
-          onPress={() => navigateToMode('guide')}
-          delayLongPress={2000}
-          onLongPress={handleUniversalLongPress}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Guide Mode. Camera obstacle alerts, label reader, and voice assistant."
-          accessibilityHint="Double tap to open Guide Mode, or hold for two seconds to start Guide Mode."
-        >
-          {/* Top Row: Icon Container & Hardware Badge */}
-          <View style={styles.cardTopRow}>
-            <View style={[styles.iconBox, styles.guideIconBox]}>
-              <Text style={styles.iconGlyph}>👁️</Text>
-            </View>
-
-            <View style={styles.hardwareBadge}>
-              <View style={[
-                styles.pulseIndicatorDot,
-                { backgroundColor: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
-              ]} />
-              <Text style={[
-                styles.hardwareBadgeText,
-                { color: permissions.camera.granted ? THEME.colors.guideAccent : THEME.colors.warning }
-              ]}>
-                {permissions.camera.granted ? 'Vision AI Ready' : 'Camera Required'}
+            {/* Center Content: Title & Description */}
+            <View style={styles.cardCenterContent}>
+              <Text style={styles.cardTitle}>Guide Mode</Text>
+              <Text style={styles.cardSubtitle}>
+                Camera obstacle alerts, label reader & voice assistant
               </Text>
             </View>
-          </View>
 
-          {/* Center Content: Title & Description */}
-          <View style={styles.cardCenterContent}>
-            <Text style={styles.cardTitle}>Guide Mode</Text>
-            <Text style={styles.cardSubtitle}>
-              Camera obstacle alerts, label reader & voice assistant
-            </Text>
-          </View>
+            {/* Bottom Action Affordance Button with Horizontal Gradient */}
+            <LinearGradient
+              colors={['#34D399', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.actionButton, styles.guideActionGradient]}
+            >
+              <View style={styles.actionButtonContent}>
+                <Text style={styles.actionButtonIcon}>📡</Text>
+                <Text style={styles.guideActionText}>Start Guide Mode</Text>
+              </View>
+              <ChevronRight color="#002114" />
+            </LinearGradient>
+          </Pressable>
 
-          {/* Bottom Action Affordance Button */}
-          <View style={[styles.actionButton, styles.guideActionButton]}>
-            <View style={styles.actionButtonContent}>
-              <Text style={styles.actionButtonIcon}>📡</Text>
-              <Text style={styles.guideActionText}>Start Guide Mode</Text>
+          {/* Ambient Sensory Footer Banner with Gradient */}
+          <LinearGradient
+            colors={['#1E293B', '#0F172A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.footerBanner}
+          >
+            <View style={styles.footerIconContainer}>
+              <Text style={styles.footerIconGlyph}>🔊</Text>
             </View>
-            <Text style={styles.actionArrow}>→</Text>
-          </View>
-        </Pressable>
-
-        {/* Ambient Sensory Footer Banner */}
-        <View style={styles.footerBanner}>
-          <View style={styles.footerIconContainer}>
-            <Text style={styles.footerIconGlyph}>🔊</Text>
-          </View>
-          <View style={styles.footerTextContainer}>
-            <Text style={styles.footerTitle}>Auto-Voice & No-Look Entry</Text>
-            <Text style={styles.footerSubtitle}>
-              Speaks automatically • Hold anywhere (2s) or shake to start Guide
-            </Text>
-          </View>
-          <Text style={styles.footerCheckGlyph}>✓</Text>
+            <View style={styles.footerTextContainer}>
+              <Text style={styles.footerTitle}>Auto-Voice & No-Look Entry</Text>
+              <Text style={styles.footerSubtitle}>
+                Speaks automatically • Hold anywhere (2s) or shake to start Guide
+              </Text>
+            </View>
+            <View style={styles.footerCheckBadge}>
+              <Text style={styles.footerCheckGlyph}>✓</Text>
+            </View>
+          </LinearGradient>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  rootGradient: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
   },
   container: {
     flex: 1,
@@ -329,12 +415,13 @@ const styles = StyleSheet.create({
   },
   modeCard: {
     flex: 1,
-    borderRadius: THEME.borderRadius.card,
-    backgroundColor: THEME.colors.surfaceElevated,
+    borderRadius: 22,
     padding: THEME.spacing.md,
     justifyContent: 'space-between',
     marginVertical: THEME.spacing.xs,
     minHeight: 200,
+    overflow: 'hidden',
+    position: 'relative',
   },
   cardPressed: {
     transform: [{ scale: 0.985 }],
@@ -342,32 +429,58 @@ const styles = StyleSheet.create({
   },
   conversationCard: {
     borderWidth: 2,
-    borderColor: THEME.colors.conversationBorder,
+    borderColor: '#38BDF8',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 8,
   },
   guideCard: {
     borderWidth: 2,
-    borderColor: THEME.colors.guideBorder,
+    borderColor: '#34D399',
+    shadowColor: '#34D399',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ambientGlowArc: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 2,
   },
   iconBox: {
     width: 52,
     height: 52,
     borderRadius: THEME.borderRadius.iconBox,
-    backgroundColor: THEME.colors.surfaceInteractive,
     alignItems: 'center',
     justifyContent: 'center',
   },
   conversationIconBox: {
     borderWidth: 1.5,
-    borderColor: THEME.colors.conversationBorder,
+    borderColor: '#38BDF8',
+    shadowColor: '#38BDF8',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   guideIconBox: {
     borderWidth: 1.5,
-    borderColor: THEME.colors.guideBorder,
+    borderColor: '#34D399',
+    shadowColor: '#34D399',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   iconGlyph: {
     fontSize: 26,
@@ -378,7 +491,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: THEME.borderRadius.badge,
-    backgroundColor: THEME.colors.surfaceInteractive,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   pulseIndicatorDot: {
     width: 8,
@@ -393,6 +508,7 @@ const styles = StyleSheet.create({
   },
   cardCenterContent: {
     marginVertical: THEME.spacing.xs,
+    zIndex: 2,
   },
   cardTitle: {
     color: THEME.colors.textPrimary,
@@ -409,17 +525,25 @@ const styles = StyleSheet.create({
   actionButton: {
     width: '100%',
     height: THEME.touchTargets.actionButton,
-    borderRadius: THEME.borderRadius.button,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: THEME.spacing.md,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  conversationActionButton: {
-    backgroundColor: THEME.colors.conversationContainer,
+  conversationActionGradient: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.3)',
   },
-  guideActionButton: {
-    backgroundColor: THEME.colors.guideContainer,
+  guideActionGradient: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.3)',
   },
   actionButtonContent: {
     flexDirection: 'row',
@@ -430,61 +554,81 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   conversationActionText: {
-    color: THEME.colors.onConversationContainer,
+    color: '#001E2C',
     fontSize: THEME.typography.sizes.bodyLg,
     fontWeight: '700',
   },
   guideActionText: {
-    color: THEME.colors.onGuideContainer,
+    color: '#002114',
     fontSize: THEME.typography.sizes.bodyLg,
     fontWeight: '700',
   },
-  actionArrow: {
-    color: THEME.colors.onConversationContainer,
-    fontSize: 22,
-    fontWeight: '700',
+  chevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chevronStem: {
+    borderTopWidth: 2.5,
+    borderRightWidth: 2.5,
+    transform: [{ rotate: '45deg' }],
+    marginLeft: -2,
   },
   footerBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.colors.surfaceInteractive,
-    borderRadius: THEME.borderRadius.card,
-    padding: THEME.spacing.md,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: THEME.colors.borderSubtle,
-    marginTop: THEME.spacing.xs,
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   footerIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: THEME.borderRadius.badge,
-    backgroundColor: THEME.colors.surfaceElevated,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: THEME.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   footerIconGlyph: {
-    fontSize: 18,
+    fontSize: 20,
   },
   footerTextContainer: {
     flex: 1,
-    marginRight: THEME.spacing.xs,
+    marginLeft: THEME.spacing.sm,
   },
   footerTitle: {
     color: THEME.colors.textPrimary,
-    fontSize: THEME.typography.sizes.caption + 1,
-    fontWeight: '700',
+    fontSize: THEME.typography.sizes.bodyMd,
+    fontWeight: '600',
   },
   footerSubtitle: {
     color: THEME.colors.textSecondary,
-    fontSize: THEME.typography.sizes.caption - 1,
-    lineHeight: 16,
+    fontSize: THEME.typography.sizes.caption,
     marginTop: 2,
+  },
+  footerCheckBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   footerCheckGlyph: {
     color: THEME.colors.safe,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    marginLeft: 4,
   },
 });
