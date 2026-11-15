@@ -12,6 +12,7 @@ import { STORAGE_KEYS } from '../src/constants/config';
 import { checkPermissionsSnapshot, requestMicrophonePermission, requestCameraPermission } from '../src/utils/permissions';
 import { useShakeGesture } from '../src/hooks/useShakeGesture';
 import { AppMode, PermissionsSnapshot } from '../src/types';
+import { HearingIcon, MicIcon, VisionEyeIcon, RadarBeaconIcon, SpeakerWaveIcon } from '../src/components/icons/HomeIcons';
 
 // Crisp, GPU-rendered vector chevron that never glitches or renders as ''n'
 function ChevronRight({ color = '#001E2C', size = 9 }: { color?: string; size?: number }) {
@@ -44,9 +45,10 @@ export default function HomeScreen() {
 
   // Startup Sensory Safeguard: Distinct dual-pulse tactile wake-up burst on mount
   // Guarantees blind users physically feel Comfety wake up even if media volume is at 0%
+  // 180ms pulse, 280ms pause, 180ms pulse ensures two unmistakable tactile beats
   useEffect(() => {
     try {
-      Vibration.vibrate([0, 150, 80, 200]);
+      Vibration.vibrate([0, 180, 280, 180]);
     } catch (err) {
       console.warn('[Home] Startup vibration failed:', err);
     }
@@ -218,7 +220,7 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.conversationIconBox]}
               >
-                <Text style={styles.iconGlyph}>👂</Text>
+                <HearingIcon size={26} color="#38BDF8" />
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
@@ -247,8 +249,8 @@ export default function HomeScreen() {
               style={[styles.actionButton, styles.conversationActionGradient]}
             >
               <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonIcon}>🎙️</Text>
-                <Text style={styles.conversationActionText}>Open Conversation</Text>
+                <MicIcon size={18} color="#001E2C" />
+                <Text style={[styles.conversationActionText, { marginLeft: 8 }]}>Open Conversation</Text>
               </View>
               <ChevronRight color="#001E2C" />
             </LinearGradient>
@@ -294,7 +296,7 @@ export default function HomeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={[styles.iconBox, styles.guideIconBox]}
               >
-                <Text style={styles.iconGlyph}>👁️</Text>
+                <VisionEyeIcon size={26} color="#34D399" />
               </LinearGradient>
 
               <View style={styles.hardwareBadge}>
@@ -327,8 +329,8 @@ export default function HomeScreen() {
               style={[styles.actionButton, styles.guideActionGradient]}
             >
               <View style={styles.actionButtonContent}>
-                <Text style={styles.actionButtonIcon}>📡</Text>
-                <Text style={styles.guideActionText}>Start Guide Mode</Text>
+                <RadarBeaconIcon size={18} color="#002114" />
+                <Text style={[styles.guideActionText, { marginLeft: 8 }]}>Start Guide Mode</Text>
               </View>
               <ChevronRight color="#002114" />
             </LinearGradient>
@@ -342,16 +344,13 @@ export default function HomeScreen() {
             style={styles.footerBanner}
           >
             <View style={styles.footerIconContainer}>
-              <Text style={styles.footerIconGlyph}>🔊</Text>
+              <SpeakerWaveIcon size={22} color="#38BDF8" />
             </View>
             <View style={styles.footerTextContainer}>
               <Text style={styles.footerTitle}>Auto-Voice & No-Look Entry</Text>
               <Text style={styles.footerSubtitle}>
                 Speaks automatically • Hold anywhere (2s) or shake to start Guide
               </Text>
-            </View>
-            <View style={styles.footerCheckBadge}>
-              <Text style={styles.footerCheckGlyph}>✓</Text>
             </View>
           </LinearGradient>
         </View>
@@ -482,9 +481,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  iconGlyph: {
-    fontSize: 26,
-  },
   hardwareBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -548,10 +544,6 @@ const styles = StyleSheet.create({
   actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: THEME.spacing.sm,
-  },
-  actionButtonIcon: {
-    fontSize: 20,
   },
   conversationActionText: {
     color: '#001E2C',
@@ -600,9 +592,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  footerIconGlyph: {
-    fontSize: 20,
-  },
   footerTextContainer: {
     flex: 1,
     marginLeft: THEME.spacing.sm,
@@ -616,19 +605,5 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
     fontSize: THEME.typography.sizes.caption,
     marginTop: 2,
-  },
-  footerCheckBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  footerCheckGlyph: {
-    color: THEME.colors.safe,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

@@ -30,6 +30,15 @@ export function useShakeGesture({ enabled, onShake }: UseShakeGestureOptions): v
         // Distinct second spike within the 1000ms window (with >= 200ms debounce)
         if (timeSinceLastSpike >= 200 && timeSinceLastSpike <= SENSOR_THRESHOLDS.shakeWindowMs) {
           lastSpikeTimestampRef.current = 0; // Reset after trigger
+          if (__DEV__) {
+            try {
+              // Auto-dismiss Expo Dev Client menu if concurrently triggered by debug shake listener
+              const devMenu = require('expo-dev-client');
+              devMenu?.closeMenu?.();
+            } catch {
+              // expo-dev-client not loaded or unavailable
+            }
+          }
           onShakeRef.current();
         } else if (timeSinceLastSpike > SENSOR_THRESHOLDS.shakeWindowMs) {
           lastSpikeTimestampRef.current = now;
