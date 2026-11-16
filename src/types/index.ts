@@ -104,3 +104,19 @@ export interface QuickReplyItem {
   isCustom?: boolean;
 }
 
+export interface VisionDescriptionResult {
+  text: string;
+  isSimplified?: boolean;
+  modelUsed: string;
+  hasTextReading?: boolean;
+}
+
+export interface VisionRequestOptions {
+  signal?: AbortSignal;
+  customPrompt?: string;
+  isSimplification?: boolean;
+  userSpokenQuestion?: string;
+}
+
+export type GuideGestureAction = 'ask_or_read' | 'simplify' | 'toggle_radar';
+

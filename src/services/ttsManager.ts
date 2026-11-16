@@ -93,9 +93,11 @@ export async function getAvailableNativeVoices(): Promise<Speech.Voice[]> {
       voices.sort((a, b) => {
         const aLocal = a.identifier.toLowerCase().includes("-local") ? 2 : 0;
         const bLocal = b.identifier.toLowerCase().includes("-local") ? 2 : 0;
-        const aEnhanced = (a.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
-        const bEnhanced = (b.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
-        return (bLocal + bEnhanced) - (aLocal + aEnhanced);
+        const aEnhanced =
+          (a.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
+        const bEnhanced =
+          (b.quality ?? "").toLowerCase() === "enhanced" ? 1 : 0;
+        return bLocal + bEnhanced - (aLocal + aEnhanced);
       });
     }
 

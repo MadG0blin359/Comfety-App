@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@google/genai": "^3.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.25",
     "expo-asset": "~58.0.21",
