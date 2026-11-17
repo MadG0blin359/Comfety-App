@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, MediaResolution } from '@google/genai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ENV_CONFIG, AI_MODELS, STORAGE_KEYS, APP_CONFIG } from '../constants/config';
 import {
@@ -53,7 +53,7 @@ async function getEnrichedSystemInstruction(): Promise<string> {
 
 interface InternalTurn {
   role: 'user' | 'model';
-  parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+  parts: { text?: string; inlineData?: { mimeType: string; data: string } }[];
 }
 
 let inMemoryTurns: InternalTurn[] = [];
@@ -127,6 +127,7 @@ export async function describeSceneOrReadText(
         contents: contentsToSend as any,
         config: {
           systemInstruction,
+          mediaResolution: MediaResolution.MEDIA_RESOLUTION_HIGH,
           abortSignal: options.signal,
         },
       });

@@ -81,6 +81,12 @@ const COMMON_WORD_MAP: Record<string, string> = {
   'रुपये': 'روپے',
   'दवा': 'دوا',
   'मदद': 'مدد',
+  'जिंदगी': 'زندگی',
+  'ज़िंदगी': 'زندگی',
+  'रास्ता': 'راستہ',
+  'ज़रूरत': 'ضرورت',
+  'जरूरत': 'ضرورت',
+  'सही': 'صحیح',
 };
 
 const CHAR_MAP: Record<string, string> = {
@@ -194,17 +200,31 @@ export function devanagariToUrdu(text: string): string {
   }
 
   // Step 2: Handle consonant + explicit nukta character (\u093C)
-  processed = processed.replace(/([कखगगडढफय])\u093C/g, (_, char) => {
+  // Ensures both decomposed (consonant + \u093C) and precomposed nukta variants correctly map to Urdu consonants
+  processed = processed.replace(/([कखगज़जडढफय])\u093C/g, (_, char) => {
     return NUKTA_MAP[char] ?? char;
   });
 
-  // Step 3: Character-by-character phonetic mapping
+  // Step 3: Character-by-character context-aware phonetic mapping
   const result: string[] = [];
   const chars = Array.from(processed);
 
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i];
-    if (ch in CHAR_MAP) {
+    const nextChar = chars[i + 1];
+    const isFollowedByWordChar =
+      nextChar !== undefined &&
+      !/[\s۔.!?،,;:\-–—\(\)\[\]"']/.test(nextChar);
+
+    if (ch === 'े' || ch === 'ै') {
+      // Medial vowel: In Urdu Nastaliq, medial "e/ai" is written with chhoti ye (ی).
+      // Bari ye (ے) is a right-joining letter only valid at word endings.
+      result.push(isFollowedByWordChar ? 'ی' : 'ے');
+    } else if (ch === 'ं' || ch === 'ँ') {
+      // Medial nasal: In Urdu, nasal noon in the middle of a word is written with dotted noon (ن).
+      // Noon ghunna (ں) is dotless and only valid at the end of words.
+      result.push(isFollowedByWordChar ? 'ن' : 'ں');
+    } else if (ch in CHAR_MAP) {
       result.push(CHAR_MAP[ch]);
     } else {
       result.push(ch);
@@ -215,12 +235,14 @@ export function devanagariToUrdu(text: string): string {
 }
 
 /**
- * Normalizes double vowels or spacing artifacts resulting from character mapping.
+ * Normalizes double vowels, spacing artifacts, and medial joining resulting from character mapping.
  */
 function cleanUrduFormatting(text: string): string {
   return text
     // Replace double noon ghunna with single
     .replace(/ں+/g, 'ں')
+    // Guard against any medial noon ghunna followed by an Urdu letter (convert to dotted noon)
+    .replace(/ں(?=[\u0600-\u06FF])/g, 'ن')
     // Remove isolated halants or non-printable Devanagari artifacts
     .replace(/[\u0900-\u097F]/g, '')
     // Normalize spaces

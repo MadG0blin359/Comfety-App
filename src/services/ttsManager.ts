@@ -70,6 +70,7 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
 export const DEFAULT_VOICE_ID = "ur-fatima";
 
 let cachedVoices: Speech.Voice[] | null = null;
+let activeUtteranceId = 0;
 
 /**
  * Pre-warms and caches available native voices with Android cold-start warmup retry
@@ -165,6 +166,23 @@ function findMatchingVoiceIdentifier(
 
   if (langMatches.length === 0) return undefined;
 
+  // Regional prioritization: ensure UK presets (Oliver, Emma) prioritize British voices
+  // and US presets (David, Sarah) prioritize US voices if regional variants exist
+  let orderedMatches = langMatches;
+  if (presetId === "en-oliver" || presetId === "en-emma") {
+    orderedMatches = [...langMatches].sort((a, b) => {
+      const aUk = /(gb|uk|british)/i.test(a.identifier + " " + a.name) ? 1 : 0;
+      const bUk = /(gb|uk|british)/i.test(b.identifier + " " + b.name) ? 1 : 0;
+      return bUk - aUk;
+    });
+  } else if (presetId === "en-david" || presetId === "en-sarah") {
+    orderedMatches = [...langMatches].sort((a, b) => {
+      const aUs = /(us|american)/i.test(a.identifier + " " + a.name) ? 1 : 0;
+      const bUs = /(us|american)/i.test(b.identifier + " " + b.name) ? 1 : 0;
+      return bUs - aUs;
+    });
+  }
+
   // Direct mapping to Google's premade neural voice identifiers on Android
   const PREMADE_NEURAL_TAGS: Record<string, string[]> = {
     "en-david": ["tpd", "david", "male", "iom"], // US Male (human-recorded)
@@ -178,7 +196,7 @@ function findMatchingVoiceIdentifier(
   if (presetId && PREMADE_NEURAL_TAGS[presetId]) {
     const tags = PREMADE_NEURAL_TAGS[presetId];
     for (const tag of tags) {
-      const match = langMatches.find((v) => {
+      const match = orderedMatches.find((v) => {
         const idLower = (v.identifier + " " + v.name).toLowerCase();
         return idLower.includes(tag);
       });
@@ -215,17 +233,17 @@ function findMatchingVoiceIdentifier(
   ];
 
   if (targetGender === "male") {
-    const maleMatch = langMatches.find((v) => {
+    const maleMatch = orderedMatches.find((v) => {
       const lower = (v.name + " " + v.identifier).toLowerCase();
       return maleKeywords.some((kw) => lower.includes(kw));
     });
     return maleMatch?.identifier;
   } else {
-    const femaleMatch = langMatches.find((v) => {
+    const femaleMatch = orderedMatches.find((v) => {
       const lower = (v.name + " " + v.identifier).toLowerCase();
       return femaleKeywords.some((kw) => lower.includes(kw));
     });
-    return (femaleMatch ?? langMatches[0]).identifier;
+    return (femaleMatch ?? orderedMatches[0]).identifier;
   }
 }
 
@@ -266,14 +284,34 @@ export function splitTextIntoSpeechChunks(text: string): string[] {
 /**
  * Speaks text using on-device expo-speech with zero perceived delay,
  * automatic Urdu/English script routing, sentence chunking for long texts,
- * and echo-prevention lifecycle callbacks.
+ * and robust utterance-ID protected echo-prevention lifecycle callbacks.
  */
-export function speakText(text: string, options: SpeakOptions = {}): void {
+export async function speakText(
+  text: string,
+  options: SpeakOptions = {},
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) return;
 
-  // Stop any active utterance to clear queue and preempt ongoing speech
-  Speech.stop().catch(() => {});
+  // Pre-load native voices if not already cached (handles cold start before first speak)
+  if (!cachedVoices || cachedVoices.length === 0) {
+    await getAvailableNativeVoices();
+  }
+
+  // Monotonic utterance ID to prevent race conditions from canceled utterances
+  const utteranceId = ++activeUtteranceId;
+
+  // Await Speech.stop() to ensure native queue is flushed before new utterance starts
+  try {
+    await Speech.stop();
+  } catch (err) {
+    console.warn("[TTSManager] Speech.stop error:", err);
+  }
+
+  // If another utterance started while waiting for Speech.stop(), abort this one
+  if (utteranceId !== activeUtteranceId) {
+    return;
+  }
 
   const isUrdu = isUrduScript(trimmed);
 
@@ -307,9 +345,19 @@ export function speakText(text: string, options: SpeakOptions = {}): void {
   const chunks = splitTextIntoSpeechChunks(trimmed);
   let chunkIndex = 0;
 
-  const speakNextChunk = () => {
-    if (chunkIndex >= chunks.length) {
+  const handleFinish = () => {
+    if (utteranceId === activeUtteranceId) {
       options.onDone?.();
+    }
+  };
+
+  const speakNextChunk = () => {
+    if (utteranceId !== activeUtteranceId) {
+      return;
+    }
+
+    if (chunkIndex >= chunks.length) {
+      handleFinish();
       return;
     }
 
@@ -324,27 +372,33 @@ export function speakText(text: string, options: SpeakOptions = {}): void {
         volume: 1.0,
         voice: matchedVoice,
         onDone: () => {
+          if (utteranceId !== activeUtteranceId) return;
           if (isFinalChunk) {
-            options.onDone?.();
+            handleFinish();
           } else {
             speakNextChunk();
           }
         },
         onStopped: () => {
-          options.onDone?.();
+          // If a newer utterance started, do NOT trigger completion
+          if (utteranceId === activeUtteranceId) {
+            handleFinish();
+          }
         },
         onError: (err) => {
+          if (utteranceId !== activeUtteranceId) return;
           console.warn("[TTSManager] Speech synthesis error:", err);
           options.onError?.(new Error(String(err)));
-          options.onDone?.();
+          handleFinish();
         },
       });
     } catch (speakErr) {
+      if (utteranceId !== activeUtteranceId) return;
       console.error("[TTSManager] Failed to invoke Speech.speak:", speakErr);
       options.onError?.(
         speakErr instanceof Error ? speakErr : new Error(String(speakErr)),
       );
-      options.onDone?.();
+      handleFinish();
     }
   };
 

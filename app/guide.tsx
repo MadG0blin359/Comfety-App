@@ -11,12 +11,19 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as Speech from 'expo-speech';
 import {
   Camera,
+  useCameraDevice,
   usePhotoOutput,
   useCameraPermission,
 } from 'react-native-vision-camera';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { THEME } from '../src/constants/theme';
 import { speakText, stopSpeech } from '../src/services/ttsManager';
 import {
@@ -24,35 +31,97 @@ import {
   simplifyLastResponse,
   resetVisionConversation,
 } from '../src/services/geminiVision';
+import { transcribeAudio, isWhisperHallucination } from '../src/services/groqStt';
+import { AUDIO_METERING_CONFIG } from '../src/constants/config';
 
 /**
- * Converts a Uint8Array into a base64 string safely without exceeding call stack limits.
+ * Pure bitwise Base64 encoder operating directly on Uint8Array.
+ * Zero external dependencies, zero reliance on global btoa, and zero call-stack overflow risk.
  */
 function uint8ArrayToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const len = bytes.byteLength;
-  const chunkSize = 8192;
-  for (let i = 0; i < len; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));
-    binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let base64 = '';
+  const len = bytes.length;
+  const rem = len % 3;
+  const mainLen = len - rem;
+
+  for (let i = 0; i < mainLen; i += 3) {
+    const chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+    base64 +=
+      chars[(chunk >> 18) & 63] +
+      chars[(chunk >> 12) & 63] +
+      chars[(chunk >> 6) & 63] +
+      chars[chunk & 63];
   }
-  return btoa(binary);
+
+  if (rem === 1) {
+    const chunk = bytes[mainLen];
+    base64 += chars[(chunk >> 2) & 63] + chars[(chunk << 4) & 63] + '==';
+  } else if (rem === 2) {
+    const chunk = (bytes[mainLen] << 8) | bytes[mainLen + 1];
+    base64 +=
+      chars[(chunk >> 10) & 63] +
+      chars[(chunk >> 4) & 63] +
+      chars[(chunk << 2) & 63] +
+      '=';
+  }
+
+  return base64;
 }
 
 export default function GuideScreen() {
   const router = useRouter();
   const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(true);
   const [isRadarActive, setIsRadarActive] = useState<boolean>(true);
   const [torchMode, setTorchMode] = useState<'off' | 'on'>('off');
   const [statusMessage, setStatusMessage] = useState<string>('Ready • Tap anywhere to scan');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [lastSpokenText, setLastSpokenText] = useState<string>('');
 
   const lastTapTimeRef = useRef<number>(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Microphone audio recorder for smart 2.5s spoken question listening
+  const questionRecorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    isMeteringEnabled: true,
+  });
+  const questionRecorderState = useAudioRecorderState(questionRecorder, 100);
+  const questionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxDbInQuestionRef = useRef<number>(-100);
+  const speechFramesInQuestionRef = useRef<number>(0);
+  const isListeningQuestionRef = useRef<boolean>(false);
+
+  // Monitor microphone levels during the 2.5s question window
+  useEffect(() => {
+    if (!isListeningQuestionRef.current) return;
+    if (typeof questionRecorderState.metering === 'number') {
+      const db = questionRecorderState.metering;
+      maxDbInQuestionRef.current = Math.max(maxDbInQuestionRef.current, db);
+      if (db >= AUDIO_METERING_CONFIG.rmsSilenceThresholdDb) {
+        speechFramesInQuestionRef.current += 1;
+      }
+    }
+  }, [questionRecorderState.metering]);
+
+  const cancelQuestionListening = useCallback(async () => {
+    if (questionTimerRef.current) {
+      clearTimeout(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+    isListeningQuestionRef.current = false;
+    try {
+      if (questionRecorder.isRecording) {
+        await questionRecorder.stop();
+      }
+    } catch (err) {
+      console.warn('[GuideMode] Error stopping question recorder:', err);
+    }
+  }, [questionRecorder]);
 
   // Vision Camera v5 Photo Output configuration
   const photoOutput = usePhotoOutput({
@@ -63,11 +132,12 @@ export default function GuideScreen() {
   const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
+    cancelQuestionListening();
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     router.replace('/?select=true');
-  }, [router]);
+  }, [cancelQuestionListening, router]);
 
   useEffect(() => {
     const onHardwareBack = () => {
@@ -90,7 +160,6 @@ export default function GuideScreen() {
   // Spoken onboarding announcement upon entering Guide Mode
   useEffect(() => {
     resetVisionConversation();
-    setIsCameraActive(true);
 
     const welcomeTimeout = setTimeout(() => {
       speakText(
@@ -104,12 +173,13 @@ export default function GuideScreen() {
     return () => {
       clearTimeout(welcomeTimeout);
       stopSpeech();
+      cancelQuestionListening();
       setIsCameraActive(false);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [cancelQuestionListening]);
 
   /**
    * Captures high-res photo from Camera, reads base64 in-memory, and requests Gemini analysis.
@@ -143,7 +213,6 @@ export default function GuideScreen() {
           userSpokenQuestion: spokenQuestion,
         });
 
-        setLastSpokenText(result.text);
         setStatusMessage(result.hasTextReading ? 'Text Detected' : 'Scene Described');
 
         // Announce aloud through natural TTS
@@ -172,6 +241,7 @@ export default function GuideScreen() {
    * Double-tap action: Restates previous visual response in plain, simple everyday words.
    */
   const handleSimplification = useCallback(async () => {
+    cancelQuestionListening();
     if (isProcessing) return;
 
     setIsProcessing(true);
@@ -184,7 +254,6 @@ export default function GuideScreen() {
 
     try {
       const result = await simplifyLastResponse({ signal: controller.signal });
-      setLastSpokenText(result.text);
       setStatusMessage('Simplified Explanation');
 
       speakText(result.text, {
@@ -200,18 +269,125 @@ export default function GuideScreen() {
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing]);
+  }, [cancelQuestionListening, isProcessing]);
 
   /**
-   * Single-tap handler with smart 2.5s fallback:
-   * Tapping emits immediate haptic feedback, stops active speech, and triggers capture.
+   * Single-tap handler with smart 2.5s question-vs-scan fallback:
+   * Tapping emits immediate haptic feedback, stops active speech, and opens
+   * a 2.5-second listening window for spoken questions.
+   * If speech is detected, prompt Gemini with the spoken question.
+   * If silence is detected for 2.5s, auto-capture and read/describe.
    */
-  const handleSingleTap = useCallback(() => {
+  const handleSingleTap = useCallback(async () => {
     stopSpeech();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setStatusMessage('Scanning in front of you...');
-    captureAndAnalyze();
-  }, [captureAndAnalyze]);
+
+    if (isProcessing) return;
+
+    // Check microphone permission for question asking
+    let canRecord = false;
+    try {
+      const { granted } = await requestRecordingPermissionsAsync();
+      canRecord = granted;
+      if (granted) {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+      }
+    } catch {
+      canRecord = false;
+    }
+
+    if (!canRecord) {
+      // If mic permission unavailable, proceed directly to scene scan
+      setStatusMessage('Scanning in front of you...');
+      captureAndAnalyze();
+      return;
+    }
+
+    // Start 2.5s question listening window
+    setStatusMessage('Listening for question (or wait 2s to scan)...');
+    maxDbInQuestionRef.current = -100;
+    speechFramesInQuestionRef.current = 0;
+    isListeningQuestionRef.current = true;
+
+    try {
+      await questionRecorder.prepareToRecordAsync({
+        ...RecordingPresets.HIGH_QUALITY,
+        isMeteringEnabled: true,
+      });
+      questionRecorder.record();
+    } catch (recErr) {
+      console.warn('[GuideMode] Failed to start question recording:', recErr);
+      isListeningQuestionRef.current = false;
+      captureAndAnalyze();
+      return;
+    }
+
+    if (questionTimerRef.current) clearTimeout(questionTimerRef.current);
+    questionTimerRef.current = setTimeout(async () => {
+      questionTimerRef.current = null;
+      if (!isListeningQuestionRef.current) return;
+      isListeningQuestionRef.current = false;
+
+      const peakDb = maxDbInQuestionRef.current;
+      const speechFrames = speechFramesInQuestionRef.current;
+
+      try {
+        if (questionRecorder.isRecording) {
+          await questionRecorder.stop();
+        }
+      } catch (stopErr) {
+        console.warn('[GuideMode] Question recorder stop error:', stopErr);
+      }
+
+      const chunkUri = questionRecorder.uri;
+
+      // Check if user spoke a question (> -35dB and >= 3 speech frames)
+      if (
+        chunkUri &&
+        peakDb >= AUDIO_METERING_CONFIG.rmsSilenceThresholdDb &&
+        speechFrames >= 3
+      ) {
+        setStatusMessage('Transcribing question...');
+        try {
+          const transResult = await transcribeAudio(chunkUri);
+          const userQuestion = transResult.text.trim();
+
+          if (userQuestion.length > 0 && !isWhisperHallucination(userQuestion)) {
+            // Check for torch commands
+            if (
+              /turn on light|turn on torch|flash on|روشنی جلاؤ|ٹارچ چلاؤ|بتی جلاؤ/i.test(
+                userQuestion
+              )
+            ) {
+              setTorchMode('on');
+            } else if (
+              /turn off light|turn off torch|flash off|روشنی بند|ٹارچ بند/i.test(
+                userQuestion
+              )
+            ) {
+              setTorchMode('off');
+            }
+
+            setStatusMessage(`Question: "${userQuestion.slice(0, 24)}..."`);
+            captureAndAnalyze(userQuestion);
+            return;
+          }
+        } catch (transErr) {
+          console.warn(
+            '[GuideMode] Question transcription failed, falling back to auto-scan:',
+            transErr
+          );
+        }
+      }
+
+      // Silence or no speech detected during 2.5s -> Auto-capture and describe
+      setStatusMessage('Scanning in front of you...');
+      captureAndAnalyze();
+    }, 2500);
+  }, [captureAndAnalyze, isProcessing, questionRecorder]);
 
   /**
    * Master touch dispatcher handling 1x Tap vs 2x Tap resolution across the entire screen.
@@ -245,6 +421,7 @@ export default function GuideScreen() {
    * 1.5s Long Press handler: Toggles obstacle alerts/radar with spoken & haptic confirmation.
    */
   const handleLongPress = useCallback(() => {
+    cancelQuestionListening();
     // Clear any pending single-tap timer
     if (singleTapTimerRef.current) {
       clearTimeout(singleTapTimerRef.current);
@@ -258,7 +435,7 @@ export default function GuideScreen() {
       speakText(nextState ? 'Obstacle alerts active' : 'Obstacle alerts paused');
       return nextState;
     });
-  }, []);
+  }, [cancelQuestionListening]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -333,24 +510,34 @@ export default function GuideScreen() {
         accessibilityRole="button"
         accessibilityLabel="Guide Mode Camera Surface. Tap once to scan or ask. Double tap to simplify. Hold to toggle alerts."
       >
-        {hasPermission ? (
+        {hasPermission && device != null ? (
           <Camera
             style={StyleSheet.absoluteFill}
-            device="back"
+            device={device}
             isActive={isCameraActive}
             outputs={[photoOutput]}
             torchMode={torchMode}
           />
         ) : (
           <View style={styles.permissionFallback}>
-            <Ionicons name="camera-outline" size={48} color={THEME.colors.warning} />
-            <Text style={styles.permissionText}>Camera Permission Required</Text>
-            <Pressable
-              style={styles.permissionButton}
-              onPress={() => requestPermission()}
-            >
-              <Text style={styles.permissionButtonText}>Grant Permission</Text>
-            </Pressable>
+            <Ionicons
+              name={hasPermission ? 'camera-outline' : 'warning-outline'}
+              size={48}
+              color={THEME.colors.warning}
+            />
+            <Text style={styles.permissionText}>
+              {hasPermission
+                ? 'Initializing Camera Device...'
+                : 'Camera Permission Required'}
+            </Text>
+            {!hasPermission && (
+              <Pressable
+                style={styles.permissionButton}
+                onPress={() => requestPermission()}
+              >
+                <Text style={styles.permissionButtonText}>Grant Permission</Text>
+              </Pressable>
+            )}
           </View>
         )}
 

@@ -184,7 +184,7 @@ export default function HomeScreen() {
       Speech.stop();
       const speechTimer = setTimeout(() => {
         Speech.speak(
-          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, or shake your phone to start Guide Mode.",
+          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
           {
             language: "en",
             rate: 0.8, // Comfortable, normal pace for clear comprehension
@@ -261,10 +261,12 @@ export default function HomeScreen() {
             ]}
             onPressIn={handlePressIn}
             onPress={() => navigateToMode("conversation")}
+            onLongPress={() => navigateToMode("guide")}
+            delayLongPress={2000}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Conversation Mode. Live Urdu and English captions plus natural voice replies."
-            accessibilityHint="Tap to open Conversation Mode."
+            accessibilityHint="Tap to open Conversation Mode, or hold anywhere for two seconds to start Guide Mode."
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
@@ -350,10 +352,12 @@ export default function HomeScreen() {
             ]}
             onPressIn={handlePressIn}
             onPress={() => navigateToMode("guide")}
+            onLongPress={() => navigateToMode("guide")}
+            delayLongPress={2000}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Guide Mode. Camera obstacle alerts, label reader, and voice assistant."
-            accessibilityHint="Tap to open Guide Mode."
+            accessibilityHint="Tap or hold anywhere for two seconds to open Guide Mode."
           >
             {/* Dark Linear Gradient Background */}
             <LinearGradient
