@@ -250,6 +250,36 @@ function findMatchingVoiceIdentifier(
 const MAX_SPEECH_CHUNK_LENGTH = 3500;
 
 /**
+ * Strips markdown asterisks, bold/italic markers, bullets, and formatting characters
+ * so Text-to-Speech engines pronounce natural words instead of literal punctuation
+ * like "sitara, sitara" (star/asterisk) in Urdu or English.
+ */
+export function cleanTextForSpeech(text: string): string {
+  if (!text) return '';
+
+  return (
+    text
+      // 1. Remove markdown bold/italics: **text** or *text* -> text
+      .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
+      // 2. Remove markdown strikethrough: ~~text~~ -> text
+      .replace(/~~(.*?)~~/g, '$1')
+      // 3. Remove markdown headers: # Header -> Header
+      .replace(/^#{1,6}\s+/gm, '')
+      // 4. Remove bullet list markers: * item, - item, + item -> item
+      .replace(/^[\*\-\+]\s+/gm, '')
+      // 5. Remove any remaining stray asterisks (*), hashtags (#), tildes (~), underscores (_)
+      .replace(/[\*#~_]/g, '')
+      // 6. Remove inline code: `code` -> code
+      .replace(/`([^`]+)`/g, '$1')
+      // 7. Remove markdown links: [label](url) -> label
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // 8. Collapse excessive whitespace and consecutive newlines
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+}
+
+/**
  * Splits lengthy text along sentence boundaries so it never exceeds
  * Android's 4,000-character utterance ceiling (Speech.maxSpeechInputLength).
  */
@@ -290,8 +320,8 @@ export async function speakText(
   text: string,
   options: SpeakOptions = {},
 ): Promise<void> {
-  const trimmed = text.trim();
-  if (!trimmed) return;
+  const cleanedText = cleanTextForSpeech(text);
+  if (!cleanedText) return;
 
   // Pre-load native voices if not already cached (handles cold start before first speak)
   if (!cachedVoices || cachedVoices.length === 0) {
@@ -313,7 +343,7 @@ export async function speakText(
     return;
   }
 
-  const isUrdu = isUrduScript(trimmed);
+  const isUrdu = isUrduScript(cleanedText);
 
   // Find requested preset
   const selectedPreset =
@@ -342,7 +372,7 @@ export async function speakText(
   options.onStart?.();
 
   // Split into sentence chunks if text exceeds Android's 4,000 character limit
-  const chunks = splitTextIntoSpeechChunks(trimmed);
+  const chunks = splitTextIntoSpeechChunks(cleanedText);
   let chunkIndex = 0;
 
   const handleFinish = () => {

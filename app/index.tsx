@@ -315,7 +315,7 @@ export default function HomeScreen() {
                   ]}
                 >
                   {permissions.microphone.granted
-                    ? "Bilingual AI • Mic Ready"
+                    ? "Bilingual AI"
                     : "Mic Required"}
                 </Text>
               </View>
@@ -411,9 +411,7 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
-                  {permissions.camera.granted
-                    ? "Vision AI Ready"
-                    : "Camera Required"}
+                  {permissions.camera.granted ? "Vision AI" : "Camera Required"}
                 </Text>
               </View>
             </View>

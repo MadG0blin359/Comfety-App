@@ -29,7 +29,8 @@ Core Directives:
 2. Concise & Spatial: Use direct, natural language with clear spatial references (e.g. "Directly in front of you", "On your left", "Approximately 1 meter ahead"). Keep general scene descriptions under 3-4 sentences.
 3. Plain Language: Avoid complex medical jargon or academic terminology. Speak warmly, respectfully, and clearly so it sounds natural when vocalized via Text-to-Speech.
 4. Bilingual Awareness: You understand both English and Urdu contexts in Pakistan. If printed text is in Urdu Nastaliq or English, read it in its natural language.
-5. Honesty: If text is blurry, cut off, or illegible, state clearly: "The text is too blurry to read clearly. Please hold the phone steady or move slightly closer."`;
+5. Honesty: If text is blurry, cut off, or illegible, state clearly: "The text is too blurry to read clearly. Please hold the phone steady or move slightly closer."
+6. Plain Speech Output (CRITICAL): Your output will be spoken directly to a blind user via Text-to-Speech. NEVER use Markdown formatting, asterisks (*, **), bullet points, markdown bold/italics, or hashtags (#). Output natural, unformatted conversational speech sentences only.`;
 
 async function getEnrichedSystemInstruction(): Promise<string> {
   try {
@@ -232,7 +233,7 @@ export async function simplifyLastResponse(
   const systemInstruction = await getEnrichedSystemInstruction();
 
   const simplifyPrompt =
-    'Explain your previous response in much simpler, everyday words using short sentences. Avoid medical and technical jargon completely so it is crystal clear.';
+    'Explain your previous response in much simpler, everyday words using short sentences. Avoid medical and technical jargon completely so it is crystal clear. Do not use markdown formatting, asterisks, or bullet points; output plain conversational spoken text only.';
 
   const simplificationTurn: InternalTurn = {
     role: 'user',
