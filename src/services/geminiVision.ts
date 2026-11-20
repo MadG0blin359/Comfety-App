@@ -64,16 +64,20 @@ export function resetVisionConversation(): void {
 }
 
 /**
- * Checks if an error is an HTTP 429 rate limit error or quota exhaustion.
+ * Checks if an error is an HTTP 429 rate limit or HTTP 503 temporary high-demand/capacity error.
  */
-function isRateLimitError(err: unknown): boolean {
+function isRateLimitOrHighDemandError(err: unknown): boolean {
   if (!err) return false;
   const msg = String(err).toLowerCase();
   return (
     msg.includes('429') ||
+    msg.includes('503') ||
     msg.includes('rate limit') ||
     msg.includes('quota') ||
-    msg.includes('resource_exhausted')
+    msg.includes('resource_exhausted') ||
+    msg.includes('high demand') ||
+    msg.includes('unavailable') ||
+    msg.includes('overloaded')
   );
 }
 
@@ -179,18 +183,18 @@ export async function describeSceneOrReadText(
         );
       }
 
-      if (isRateLimitError(err)) {
-        // Switch to fast fallback model on rate limit
+      if (isRateLimitOrHighDemandError(err)) {
+        // Switch to fast fallback model on rate limit or 503 high demand
         if (activeModel === AI_MODELS.VISION_PRIMARY_MODEL) {
           console.warn(
-            `[GeminiVision] Primary model ${AI_MODELS.VISION_PRIMARY_MODEL} rate limited. Switching to fast fallback ${AI_MODELS.VISION_FAST_FALLBACK_MODEL}...`
+            `[GeminiVision] Primary model ${AI_MODELS.VISION_PRIMARY_MODEL} rate limited or high demand (503). Switching to fast fallback ${AI_MODELS.VISION_FAST_FALLBACK_MODEL}...`
           );
           activeModel = AI_MODELS.VISION_FAST_FALLBACK_MODEL;
         }
 
         if (attempt < retryDelays.length) {
           const delay = retryDelays[attempt];
-          console.warn(`[GeminiVision] 429 received, backing off for ${delay}ms...`);
+          console.warn(`[GeminiVision] Retrying with ${activeModel} in ${delay}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
@@ -269,8 +273,10 @@ export async function simplifyLastResponse(
       isSimplified: true,
     };
   } catch (err: unknown) {
-    if (isRateLimitError(err)) {
-      console.warn('[GeminiVision] Simplification rate limited on primary model. Retrying with fallback...');
+    if (isRateLimitOrHighDemandError(err)) {
+      console.warn(
+        `[GeminiVision] Simplification rate limited or high demand (503) on primary model. Retrying with fallback ${AI_MODELS.VISION_FAST_FALLBACK_MODEL}...`
+      );
       const fallbackResponse = await ai.models.generateContent({
         model: AI_MODELS.VISION_FAST_FALLBACK_MODEL,
         contents: contentsToSend as any,
