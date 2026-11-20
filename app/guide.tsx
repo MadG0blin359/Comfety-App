@@ -79,7 +79,7 @@ export default function GuideScreen() {
   const [isCameraStarted, setIsCameraStarted] = useState<boolean>(false);
   const [isRadarActive, setIsRadarActive] = useState<boolean>(true);
   const [torchMode, setTorchMode] = useState<'off' | 'on' | undefined>(undefined);
-  const [statusMessage, setStatusMessage] = useState<string>('Ready • Tap anywhere to scan');
+  const [statusMessage, setStatusMessage] = useState<string>('Ready • Tap to scan');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const lastTapTimeRef = useRef<number>(0);
@@ -209,8 +209,10 @@ export default function GuideScreen() {
       if (isProcessing) return;
 
       setIsProcessing(true);
-      setStatusMessage('Capturing & analyzing scene...');
+      setStatusMessage('AI Analyzing...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      // Blind accessibility: Immediately inform the blind user through audio that AI is analyzing
+      speakText('Analyzing...');
 
       // Create cancellation signal for this request
       const controller = new AbortController();
@@ -238,7 +240,7 @@ export default function GuideScreen() {
         // Announce aloud through natural TTS
         speakText(result.text, {
           onDone: () => {
-            setStatusMessage('Ready • Tap anywhere to scan');
+            setStatusMessage('Ready • Tap to scan');
           },
         });
       } catch (err: unknown) {
@@ -265,20 +267,21 @@ export default function GuideScreen() {
     if (isProcessing) return;
 
     setIsProcessing(true);
-    setStatusMessage('Simplifying explanation...');
+    setStatusMessage('Simplifying...');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    stopSpeech();
+    // Blind accessibility: Immediately confirm simplification action through speech
+    speakText('Simplifying...');
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
       const result = await simplifyLastResponse({ signal: controller.signal });
-      setStatusMessage('Simplified Explanation');
+      setStatusMessage('Simplified');
 
       speakText(result.text, {
         onDone: () => {
-          setStatusMessage('Ready • Tap anywhere to scan');
+          setStatusMessage('Ready • Tap to scan');
         },
       });
     } catch (err: unknown) {
@@ -321,13 +324,13 @@ export default function GuideScreen() {
 
     if (!canRecord) {
       // If mic permission unavailable, proceed directly to scene scan
-      setStatusMessage('Scanning in front of you...');
+      setStatusMessage('AI Analyzing...');
       captureAndAnalyze();
       return;
     }
 
     // Start 2.5s question listening window
-    setStatusMessage('Listening for question (or wait 2s to scan)...');
+    setStatusMessage('Listening • Or wait to scan');
     maxDbInQuestionRef.current = -100;
     speechFramesInQuestionRef.current = 0;
     isListeningQuestionRef.current = true;
@@ -370,7 +373,7 @@ export default function GuideScreen() {
         peakDb >= AUDIO_METERING_CONFIG.rmsSilenceThresholdDb &&
         speechFrames >= 3
       ) {
-        setStatusMessage('Transcribing question...');
+        setStatusMessage('Transcribing...');
         try {
           const transResult = await transcribeAudio(chunkUri);
           const userQuestion = transResult.text.trim();
@@ -411,7 +414,8 @@ export default function GuideScreen() {
               }
             }
 
-            setStatusMessage(`Question: "${userQuestion.slice(0, 24)}..."`);
+            const truncated = userQuestion.length > 20 ? userQuestion.slice(0, 18) + '...' : userQuestion;
+            setStatusMessage(`Question: "${truncated}"`);
             captureAndAnalyze(userQuestion);
             return;
           }
@@ -424,7 +428,7 @@ export default function GuideScreen() {
       }
 
       // Silence or no speech detected during 2.5s -> Auto-capture and describe
-      setStatusMessage('Scanning in front of you...');
+      setStatusMessage('AI Analyzing...');
       captureAndAnalyze();
     }, 2500);
   }, [captureAndAnalyze, device, isProcessing, questionRecorder]);
@@ -606,7 +610,11 @@ export default function GuideScreen() {
                 color={THEME.colors.guideAccent}
               />
             )}
-            <Text style={styles.statusPillText} numberOfLines={1}>
+            <Text
+              style={styles.statusPillText}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
               {statusMessage}
             </Text>
           </View>
@@ -615,13 +623,13 @@ export default function GuideScreen() {
         {/* Gesture Guidance Footer (Zero-Vision Tactile Cue) */}
         <View style={styles.gestureHintBar} pointerEvents="none">
           <View style={styles.gestureHintPill}>
-            <Text style={styles.gestureHintText}>1x Tap: Scan</Text>
+            <Text style={styles.gestureHintText} numberOfLines={1}>1x: Scan</Text>
           </View>
           <View style={styles.gestureHintPill}>
-            <Text style={styles.gestureHintText}>2x Tap: Simplify</Text>
+            <Text style={styles.gestureHintText} numberOfLines={1}>2x: Simplify</Text>
           </View>
           <View style={styles.gestureHintPill}>
-            <Text style={styles.gestureHintText}>Hold: Radar</Text>
+            <Text style={styles.gestureHintText} numberOfLines={1}>Hold: Radar</Text>
           </View>
         </View>
       </Pressable>
@@ -765,43 +773,51 @@ const styles = StyleSheet.create({
   statusPillContainer: {
     position: 'absolute',
     top: 16,
-    left: 16,
-    right: 16,
+    left: 20,
+    right: 20,
     alignItems: 'center',
+    zIndex: 10,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
-    maxWidth: '92%',
+    maxWidth: '96%',
   },
   statusPillText: {
     color: THEME.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   gestureHintBar: {
     position: 'absolute',
     bottom: 24,
-    left: 16,
-    right: 16,
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    zIndex: 10,
   },
   gestureHintPill: {
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    flexShrink: 1,
   },
   gestureHintText: {
     color: THEME.colors.textSecondary,
