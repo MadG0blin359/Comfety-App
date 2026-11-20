@@ -27,6 +27,7 @@ import {
 } from 'expo-audio';
 import { THEME } from '../src/constants/theme';
 import { speakText, stopSpeech } from '../src/services/ttsManager';
+import { useAutoTorch } from '../src/hooks/useAutoTorch';
 import {
   describeSceneOrReadText,
   simplifyLastResponse,
@@ -79,9 +80,14 @@ export default function GuideScreen() {
   const [isCameraActive, setIsCameraActive] = useState<boolean>(true);
   const [isCameraStarted, setIsCameraStarted] = useState<boolean>(false);
   const [isRadarActive, setIsRadarActive] = useState<boolean>(true);
-  const [torchMode, setTorchMode] = useState<'off' | 'on' | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState<string>('Ready • Tap to scan');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+
+  const { torchMode, setTorchManual } = useAutoTorch({
+    hasTorch: Boolean(device?.hasTorch),
+    isCameraStarted,
+    enabled: isCameraActive,
+  });
 
   const lastTapTimeRef = useRef<number>(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,14 +155,14 @@ export default function GuideScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
     cancelQuestionListening();
-    setTorchMode('off');
+    setTorchManual('off');
     setIsCameraActive(false);
     setIsCameraStarted(false);
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     router.replace('/?select=true');
-  }, [cancelQuestionListening, router]);
+  }, [cancelQuestionListening, router, setTorchManual]);
 
   useEffect(() => {
     const onHardwareBack = () => {
@@ -193,14 +199,14 @@ export default function GuideScreen() {
       clearTimeout(welcomeTimeout);
       stopSpeech();
       cancelQuestionListening();
-      setTorchMode('off');
+      setTorchManual('off');
       setIsCameraActive(false);
       setIsCameraStarted(false);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [cancelQuestionListening]);
+  }, [cancelQuestionListening, setTorchManual]);
 
   /**
    * Captures high-res photo from Camera, reads base64 in-memory, and requests Gemini analysis.
@@ -406,7 +412,7 @@ export default function GuideScreen() {
 
             if (wantsTorchOn) {
               if (device?.hasTorch) {
-                setTorchMode('on');
+                setTorchManual('on');
                 if (isJustTorchCommand) {
                   speakText('Torch turned on.');
                   setStatusMessage('Torch On');
@@ -417,7 +423,7 @@ export default function GuideScreen() {
                 if (isJustTorchCommand) return;
               }
             } else if (wantsTorchOff) {
-              setTorchMode('off');
+              setTorchManual('off');
               if (isJustTorchCommand) {
                 speakText('Torch turned off.');
                 setStatusMessage('Torch Off');
@@ -442,7 +448,7 @@ export default function GuideScreen() {
       setStatusMessage('AI Analyzing...');
       captureAndAnalyze();
     }, 2500);
-  }, [captureAndAnalyze, device, isProcessing, questionRecorder]);
+  }, [captureAndAnalyze, device, isProcessing, questionRecorder, setTorchManual]);
 
   /**
    * Master touch dispatcher handling 1x Tap vs 2x Tap resolution across the entire screen.
