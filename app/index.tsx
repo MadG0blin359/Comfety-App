@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, Vibration } from "react-native";
+import { View, Text, StyleSheet, Pressable, Vibration, AppState } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Speech from "expo-speech";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { speakText, stopSpeech } from "../src/services/ttsManager";
 
 import { THEME } from "../src/constants/theme";
 import { STORAGE_KEYS } from "../src/constants/config";
@@ -131,7 +131,7 @@ export default function HomeScreen() {
       isNavigatingRef.current = true;
 
       // Immediately stop any active onboarding announcement
-      Speech.stop();
+      stopSpeech();
 
       // Tactile confirmation
       await Haptics.notificationAsync(
@@ -181,22 +181,19 @@ export default function HomeScreen() {
       refreshPermissions();
 
       // Clear any prior speech and announce instructions with a small buffer for Android TTS readiness
-      Speech.stop();
+      stopSpeech();
       const speechTimer = setTimeout(() => {
-        Speech.speak(
-          "Welcome to Comfayty. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
-          {
-            language: "en",
-            rate: 0.8, // Comfortable, normal pace for clear comprehension
-            pitch: 1.0,
-          },
-        );
+        if (AppState.currentState === "active") {
+          speakText(
+            "Welcome to Comfayty. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
+          );
+        }
       }, 150);
 
       return () => {
         clearTimeout(speechTimer);
         setIsScreenFocused(false);
-        Speech.stop();
+        stopSpeech();
       };
     }, [params.select, isCheckingAutoOpen, refreshPermissions]),
   );

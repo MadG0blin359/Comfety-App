@@ -1,3 +1,4 @@
+import { AppState, AppStateStatus } from "react-native";
 import * as Speech from "expo-speech";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TtsVoicePreset } from "../types";
@@ -71,6 +72,13 @@ export const DEFAULT_VOICE_ID = "ur-fatima";
 
 let cachedVoices: Speech.Voice[] | null = null;
 let activeUtteranceId = 0;
+
+// Global AppState listener: Instantly halt native speech when minimized, locked, or backgrounded
+AppState.addEventListener("change", (nextState: AppStateStatus) => {
+  if (nextState === "background" || nextState === "inactive") {
+    stopSpeech().catch(() => {});
+  }
+});
 
 /**
  * Pre-warms and caches available native voices with Android cold-start warmup retry
@@ -320,6 +328,11 @@ export async function speakText(
   text: string,
   options: SpeakOptions = {},
 ): Promise<void> {
+  // Discard speech immediately if the app is backgrounded, inactive, or minimized
+  if (AppState.currentState !== "active") {
+    return;
+  }
+
   const cleanedText = cleanTextForSpeech(text);
   if (!cleanedText) return;
 
@@ -382,7 +395,7 @@ export async function speakText(
   };
 
   const speakNextChunk = () => {
-    if (utteranceId !== activeUtteranceId) {
+    if (utteranceId !== activeUtteranceId || AppState.currentState !== "active") {
       return;
     }
 
@@ -436,9 +449,11 @@ export async function speakText(
 }
 
 /**
- * Immediately halts active speech synthesis.
+ * Immediately halts active speech synthesis and invalidates chunk callbacks.
  */
 export async function stopSpeech(): Promise<void> {
+  // Invalidate any active utterance chain so background chunk execution halts immediately
+  activeUtteranceId++;
   try {
     await Speech.stop();
   } catch (err) {

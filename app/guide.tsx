@@ -6,6 +6,7 @@ import {
   Pressable,
   BackHandler,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -237,6 +238,11 @@ export default function GuideScreen() {
 
         setStatusMessage(result.hasTextReading ? 'Text Detected' : 'Scene Described');
 
+        // Discard speech if app was minimized or screen locked while analyzing
+        if (AppState.currentState !== 'active') {
+          return;
+        }
+
         // Announce aloud through natural TTS
         speakText(result.text, {
           onDone: () => {
@@ -278,6 +284,11 @@ export default function GuideScreen() {
     try {
       const result = await simplifyLastResponse({ signal: controller.signal });
       setStatusMessage('Simplified');
+
+      // Discard speech if app was minimized or screen locked while simplifying
+      if (AppState.currentState !== 'active') {
+        return;
+      }
 
       speakText(result.text, {
         onDone: () => {

@@ -138,7 +138,10 @@ export default function ConversationScreen() {
     };
 
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
-    return () => backSubscription.remove();
+    return () => {
+      backSubscription.remove();
+      stopSpeech();
+    };
   }, [handleBack]);
 
   const toggleRecording = () => {
