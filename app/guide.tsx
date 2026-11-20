@@ -76,8 +76,9 @@ export default function GuideScreen() {
   const device = useCameraDevice('back');
 
   const [isCameraActive, setIsCameraActive] = useState<boolean>(true);
+  const [isCameraStarted, setIsCameraStarted] = useState<boolean>(false);
   const [isRadarActive, setIsRadarActive] = useState<boolean>(true);
-  const [torchMode, setTorchMode] = useState<'off' | 'on'>('off');
+  const [torchMode, setTorchMode] = useState<'off' | 'on' | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState<string>('Ready • Tap anywhere to scan');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
@@ -128,11 +129,28 @@ export default function GuideScreen() {
     qualityPrioritization: 'speed',
   });
 
+  // Handle native Vision Camera session errors gracefully
+  const handleCameraError = useCallback((err: Error) => {
+    const msg = err.message || String(err);
+    // Ignore harmless OperationCanceledException during session initialization or shutdown
+    if (
+      msg.includes('OperationCanceledException') ||
+      msg.includes('Camera is not active')
+    ) {
+      console.warn('[GuideMode] Non-fatal camera operation cancellation:', msg);
+      return;
+    }
+    console.error('[GuideMode] Camera error:', err);
+  }, []);
+
   // Handle Android system back press
   const handleBack = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
     cancelQuestionListening();
+    setTorchMode('off');
+    setIsCameraActive(false);
+    setIsCameraStarted(false);
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -174,7 +192,9 @@ export default function GuideScreen() {
       clearTimeout(welcomeTimeout);
       stopSpeech();
       cancelQuestionListening();
+      setTorchMode('off');
       setIsCameraActive(false);
+      setIsCameraStarted(false);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -357,18 +377,38 @@ export default function GuideScreen() {
 
           if (userQuestion.length > 0 && !isWhisperHallucination(userQuestion)) {
             // Check for torch commands
-            if (
-              /turn on light|turn on torch|flash on|روشنی جلاؤ|ٹارچ چلاؤ|بتی جلاؤ/i.test(
+            const wantsTorchOn =
+              /turn on light|turn on torch|flash on|light on|torch on|روشنی جلاؤ|ٹارچ چلاؤ|بتی جلاؤ/i.test(
                 userQuestion
-              )
-            ) {
-              setTorchMode('on');
-            } else if (
-              /turn off light|turn off torch|flash off|روشنی بند|ٹارچ بند/i.test(
+              );
+            const wantsTorchOff =
+              /turn off light|turn off torch|flash off|light off|torch off|روشنی بند|ٹارچ بند/i.test(
                 userQuestion
-              )
-            ) {
+              );
+            const isJustTorchCommand =
+              /^(turn on light|turn on torch|flash on|light on|torch on|turn off light|turn off torch|flash off|light off|torch off|روشنی جلاؤ|ٹارچ چلاؤ|بتی جلاؤ|روشنی بند|ٹارچ بند)$/i.test(
+                userQuestion.trim()
+              );
+
+            if (wantsTorchOn) {
+              if (device?.hasTorch) {
+                setTorchMode('on');
+                if (isJustTorchCommand) {
+                  speakText('Torch turned on.');
+                  setStatusMessage('Torch On');
+                  return;
+                }
+              } else {
+                speakText('Flashlight is not available on this camera.');
+                if (isJustTorchCommand) return;
+              }
+            } else if (wantsTorchOff) {
               setTorchMode('off');
+              if (isJustTorchCommand) {
+                speakText('Torch turned off.');
+                setStatusMessage('Torch Off');
+                return;
+              }
             }
 
             setStatusMessage(`Question: "${userQuestion.slice(0, 24)}..."`);
@@ -387,7 +427,7 @@ export default function GuideScreen() {
       setStatusMessage('Scanning in front of you...');
       captureAndAnalyze();
     }, 2500);
-  }, [captureAndAnalyze, isProcessing, questionRecorder]);
+  }, [captureAndAnalyze, device, isProcessing, questionRecorder]);
 
   /**
    * Master touch dispatcher handling 1x Tap vs 2x Tap resolution across the entire screen.
@@ -516,7 +556,10 @@ export default function GuideScreen() {
             device={device}
             isActive={isCameraActive}
             outputs={[photoOutput]}
-            torchMode={torchMode}
+            torchMode={device?.hasTorch && isCameraStarted ? torchMode : undefined}
+            onStarted={() => setIsCameraStarted(true)}
+            onStopped={() => setIsCameraStarted(false)}
+            onError={handleCameraError}
           />
         ) : (
           <View style={styles.permissionFallback}>

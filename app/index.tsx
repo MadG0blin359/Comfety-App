@@ -184,7 +184,7 @@ export default function HomeScreen() {
       Speech.stop();
       const speechTimer = setTimeout(() => {
         Speech.speak(
-          "Welcome to Comfety. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
+          "Welcome to Comfayty. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
           {
             language: "en",
             rate: 0.8, // Comfortable, normal pace for clear comprehension
