@@ -167,6 +167,18 @@ export async function describeSceneOrReadText(
 
       lastError = err instanceof Error ? err : new Error(String(err));
 
+      // Fast-fail non-retryable authentication and authorization errors immediately
+      const errMsg = lastError.message;
+      if (
+        errMsg.includes('API_KEY_INVALID') ||
+        errMsg.includes('API key not valid') ||
+        errMsg.includes('PERMISSION_DENIED')
+      ) {
+        throw new Error(
+          'Invalid Gemini API Key. Please provide a valid API key from Google AI Studio (starts with "AIzaSy") in your .env file.'
+        );
+      }
+
       if (isRateLimitError(err)) {
         // Switch to fast fallback model on rate limit
         if (activeModel === AI_MODELS.VISION_PRIMARY_MODEL) {
