@@ -44,6 +44,10 @@ export const AUDIO_METERING_CONFIG: AudioMeteringConfig = {
   chunkDurationMs: 4000,       // Utterance window
 } as const;
 
+export const AUDIO_CONFIG = {
+  MINIMUM_VOLUME_THRESHOLD: 0.5, // Guarantee at least 50% hardware media volume on app startup
+} as const;
+
 export const STORAGE_KEYS = {
   PREFERRED_MODE: 'comfety_preferred_mode',
   AUTO_OPEN: 'comfety_auto_open',

@@ -120,7 +120,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
 
                     <Text style={styles.regionLabel}>{preset.regionLabel}</Text>
                     <Text style={styles.samplePreview} numberOfLines={1} ellipsizeMode="tail">
-                      "{preset.samplePhrase}"
+                      &ldquo;{preset.samplePhrase}&rdquo;
                     </Text>
                   </View>
 

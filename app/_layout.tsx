@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Animated, Easing, Pressable } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setAudioModeAsync } from 'expo-audio';
 import * as SplashScreen from 'expo-splash-screen';
 import { THEME } from '../src/constants/theme';
+import { ensureMinimumVolume, setupVolumeForegroundSync } from '../src/services/volumeService';
 
 // Keep native splash screen visible while app initializes
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -14,11 +15,11 @@ export default function RootLayout() {
   const [isSplashVisible, setIsSplashVisible] = useState(true);
 
   // Silky animation values for Apple-grade transition
-  const splashOpacity = useRef(new Animated.Value(1)).current;
-  const logoScale = useRef(new Animated.Value(0.92)).current;
-  const logoOpacity = useRef(new Animated.Value(0.3)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const textTranslateY = useRef(new Animated.Value(8)).current;
+  const [splashOpacity] = useState(() => new Animated.Value(1));
+  const [logoScale] = useState(() => new Animated.Value(0.92));
+  const [logoOpacity] = useState(() => new Animated.Value(0.3));
+  const [textOpacity] = useState(() => new Animated.Value(0));
+  const [textTranslateY] = useState(() => new Animated.Value(8));
 
   useEffect(() => {
     // 1. Entrance animation: organic breathing arrival
@@ -60,6 +61,13 @@ export default function RootLayout() {
         console.warn('[RootLayout] Audio mode configuration warning:', err);
       }
 
+      // Enforce at least 50% physical hardware volume so assistive voice & warnings are audible
+      try {
+        await ensureMinimumVolume();
+      } catch (err: unknown) {
+        console.warn('[RootLayout] Volume enforcement warning:', err);
+      }
+
       // Smooth hold duration: ~2.3 seconds so user comfortably absorbs the brand
       setTimeout(() => {
         // Synchronously release native OS splash
@@ -88,7 +96,12 @@ export default function RootLayout() {
     }
 
     prepare();
-  }, []);
+
+    const cleanupVolumeSync = setupVolumeForegroundSync();
+    return () => {
+      cleanupVolumeSync();
+    };
+  }, [logoOpacity, logoScale, splashOpacity, textOpacity, textTranslateY]);
 
   return (
     <SafeAreaProvider>

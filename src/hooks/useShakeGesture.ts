@@ -10,7 +10,10 @@ interface UseShakeGestureOptions {
 export function useShakeGesture({ enabled, onShake }: UseShakeGestureOptions): void {
   const lastSpikeTimestampRef = useRef<number>(0);
   const onShakeRef = useRef(onShake);
-  onShakeRef.current = onShake;
+
+  useEffect(() => {
+    onShakeRef.current = onShake;
+  }, [onShake]);
 
   useEffect(() => {
     if (!enabled) {

@@ -32,8 +32,6 @@ interface UseAudioChunkerReturn {
 export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {}): UseAudioChunkerReturn {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [meterLevel, setMeterLevel] = useState<number>(0);
-  const [currentDb, setCurrentDb] = useState<number>(-60);
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,26 +52,30 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   // Track real-time audio metering via useAudioRecorderState (100ms polling for smooth meter UI)
   const recorderState = useAudioRecorderState(recorder, 100);
 
+  // Real-time audio metering derived from recorderState (pure computation, no duplicate state)
+  const currentDb =
+    isRecording && typeof recorderState.metering === 'number'
+      ? recorderState.metering
+      : -60;
+
+  const meterLevel =
+    isRecording && typeof recorderState.metering === 'number'
+      ? Math.max(0, Math.min(1, (recorderState.metering + 60) / 60))
+      : 0;
+
   useEffect(() => {
-    // If not actively recording, immediately drop meter to zero and quiet state
+    // Track peak dB and speech frames while actively recording
     if (!isRecording) {
-      setCurrentDb(-60);
-      setMeterLevel(0);
       return;
     }
 
     if (typeof recorderState.metering === 'number') {
       const db = recorderState.metering;
-      setCurrentDb(db);
       maxDbInChunkRef.current = Math.max(maxDbInChunkRef.current, db);
 
       if (db >= AUDIO_METERING_CONFIG.rmsSilenceThresholdDb) {
         speechFramesInChunkRef.current += 1;
       }
-
-      // Normalize -60dB .. 0dB to 0.0 .. 1.0 for UI visualizer
-      const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
-      setMeterLevel(normalized);
     }
   }, [recorderState.metering, isRecording]);
 
@@ -209,8 +211,6 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const stopRecording = useCallback(async () => {
     isLoopRunningRef.current = false;
     setIsRecording(false);
-    setMeterLevel(0);
-    setCurrentDb(-60);
     setError(null);
     speechFramesInChunkRef.current = 0;
     maxDbInChunkRef.current = -100;
@@ -281,13 +281,29 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
 
   // Cleanup on unmount or when disabled
   useEffect(() => {
+    let isCancelled = false;
     if (enabled) {
-      startRecording();
+      const timer = setTimeout(() => {
+        if (!isCancelled) {
+          void startRecording();
+        }
+      }, 0);
+      return () => {
+        isCancelled = true;
+        clearTimeout(timer);
+        void stopRecording();
+      };
+    } else {
+      const timer = setTimeout(() => {
+        if (!isCancelled) {
+          void stopRecording();
+        }
+      }, 0);
+      return () => {
+        isCancelled = true;
+        clearTimeout(timer);
+      };
     }
-
-    return () => {
-      stopRecording();
-    };
   }, [enabled, startRecording, stopRecording]);
 
   return {

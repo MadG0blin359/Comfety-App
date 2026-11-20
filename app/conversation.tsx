@@ -128,7 +128,7 @@ export default function ConversationScreen() {
     stopSpeech();
     stopRecording();
     router.replace('/?select=true');
-  }, [stopSpeech, stopRecording, router]);
+  }, [stopRecording, router]);
 
   // Intercept Android hardware/gesture back press to return to mode selection instead of quitting app
   useEffect(() => {
