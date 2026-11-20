@@ -28,6 +28,7 @@ import {
 import { THEME } from '../src/constants/theme';
 import { speakText, stopSpeech } from '../src/services/ttsManager';
 import { useAutoTorch } from '../src/hooks/useAutoTorch';
+import { useObstacleLoop } from '../src/hooks/useObstacleLoop';
 import {
   describeSceneOrReadText,
   simplifyLastResponse,
@@ -134,6 +135,29 @@ export default function GuideScreen() {
   // Vision Camera v5 Photo Output configuration
   const photoOutput = usePhotoOutput({
     qualityPrioritization: 'speed',
+  });
+
+  const capturePhotoForHazard = useCallback(async (): Promise<string | null> => {
+    if (!isCameraActive || !isCameraStarted || isProcessing) {
+      return null;
+    }
+    try {
+      const photo = await photoOutput.capturePhoto({}, {});
+      const arrayBuffer = await photo.getFileDataAsync();
+      const bytes = new Uint8Array(arrayBuffer);
+      const base64Jpeg = uint8ArrayToBase64(bytes);
+      photo.dispose();
+      return base64Jpeg;
+    } catch {
+      return null;
+    }
+  }, [isCameraActive, isCameraStarted, isProcessing, photoOutput]);
+
+  const { frameOutput, activeObstacleWarning } = useObstacleLoop({
+    isRadarActive,
+    isCameraActive,
+    isCameraStarted,
+    capturePhotoForHazard,
   });
 
   // Handle native Vision Camera session errors gracefully
@@ -576,7 +600,7 @@ export default function GuideScreen() {
             style={StyleSheet.absoluteFill}
             device={device}
             isActive={isCameraActive}
-            outputs={[photoOutput]}
+            outputs={[photoOutput, frameOutput]}
             torchMode={device?.hasTorch && isCameraStarted ? torchMode : undefined}
             onStarted={() => setIsCameraStarted(true)}
             onStopped={() => setIsCameraStarted(false)}
@@ -602,6 +626,18 @@ export default function GuideScreen() {
                 <Text style={styles.permissionButtonText}>Grant Permission</Text>
               </Pressable>
             )}
+          </View>
+        )}
+
+        {/* Priority Obstacle / Hazard Warning Banner */}
+        {activeObstacleWarning && (
+          <View style={styles.obstacleAlertContainer} pointerEvents="none">
+            <View style={styles.obstacleAlertPill}>
+              <Ionicons name="warning" size={20} color="#FFFFFF" />
+              <Text style={styles.obstacleAlertText} numberOfLines={1}>
+                {activeObstacleWarning}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -840,5 +876,35 @@ const styles = StyleSheet.create({
     color: THEME.colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
+  },
+  obstacleAlertContainer: {
+    position: 'absolute',
+    top: 72,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  obstacleAlertPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#DC2626',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  obstacleAlertText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });

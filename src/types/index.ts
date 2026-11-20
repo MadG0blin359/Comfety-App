@@ -118,5 +118,12 @@ export interface VisionRequestOptions {
   userSpokenQuestion?: string;
 }
 
+export interface StructuralHazardResult {
+  hasHazard: boolean;
+  hazardType: 'stairs' | 'drain' | null;
+  warning: string;
+  modelUsed: string;
+}
+
 export type GuideGestureAction = 'ask_or_read' | 'simplify' | 'toggle_radar';
 

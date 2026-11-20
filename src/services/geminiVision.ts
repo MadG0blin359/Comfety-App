@@ -1,10 +1,11 @@
 import { GoogleGenAI, MediaResolution } from '@google/genai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ENV_CONFIG, AI_MODELS, STORAGE_KEYS, APP_CONFIG } from '../constants/config';
+import { ENV_CONFIG, AI_MODELS, STORAGE_KEYS, APP_CONFIG, RATE_LIMITS } from '../constants/config';
 import {
   VisionDescriptionResult,
   VisionRequestOptions,
   UserAccessibilityContext,
+  StructuralHazardResult,
 } from '../types';
 
 let genAIClient: GoogleGenAI | null = null;
@@ -294,5 +295,82 @@ export async function simplifyLastResponse(
       };
     }
     throw err instanceof Error ? err : new Error(String(err));
+  }
+}
+
+let lastHazardCheckTimestamp = 0;
+
+/**
+ * Checks a camera frame for critical ground-level structural drop hazards
+ * (stairs / open drains) using gemini-3.5-flash-lite at MediaResolution.MEDIA_RESOLUTION_LOW.
+ * Strictly rate-limited to at most 1 request every 7,000ms (RATE_LIMITS.GEMINI_HAZARD_INTERVAL_MS).
+ */
+export async function checkStructuralHazards(
+  base64Jpeg: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<StructuralHazardResult> {
+  const now = Date.now();
+  if (now - lastHazardCheckTimestamp < RATE_LIMITS.GEMINI_HAZARD_INTERVAL_MS) {
+    return {
+      hasHazard: false,
+      hazardType: null,
+      warning: '',
+      modelUsed: 'throttled',
+    };
+  }
+  lastHazardCheckTimestamp = now;
+
+  const ai = getGenAIClient();
+  const prompt =
+    'Look at the ground and walking path directly ahead in this image. Is there an immediate physical drop hazard of STAIRS (steps leading down or up) or an OPEN DRAIN / SEWER / HOLE / TRENCH directly in the path of a walking blind person? Return JSON: {"hasHazard": boolean, "hazardType": "stairs" | "drain" | null, "warning": "Concise warning in under 5 words"}. If no ground hazard is directly ahead, return {"hasHazard": false, "hazardType": null, "warning": ""}.';
+
+  const userTurn = {
+    role: 'user',
+    parts: [
+      {
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64Jpeg,
+        },
+      },
+      { text: prompt },
+    ],
+  };
+
+  const activeModel = AI_MODELS.VISION_FAST_FALLBACK_MODEL; // gemini-3.5-flash-lite
+
+  try {
+    const response = await ai.models.generateContent({
+      model: activeModel,
+      contents: [userTurn] as any,
+      config: {
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
+        responseMimeType: 'application/json',
+        abortSignal: options.signal,
+      },
+    });
+
+    const text = response.text?.trim() ?? '{}';
+    let parsed: { hasHazard?: boolean; hazardType?: 'stairs' | 'drain' | null; warning?: string };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { hasHazard: false, hazardType: null, warning: '' };
+    }
+
+    return {
+      hasHazard: Boolean(parsed.hasHazard && parsed.hazardType),
+      hazardType: parsed.hazardType ?? null,
+      warning: parsed.warning?.trim() ?? '',
+      modelUsed: activeModel,
+    };
+  } catch (err: unknown) {
+    console.warn('[GeminiVision] Structural hazard check error:', err);
+    return {
+      hasHazard: false,
+      hazardType: null,
+      warning: '',
+      modelUsed: activeModel,
+    };
   }
 }
