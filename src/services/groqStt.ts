@@ -112,14 +112,14 @@ export interface GroqVerboseResponse {
 export const HALLUCINATION_BLOCKLIST = new Set<string>([
   'موسیقی',
   'music',
-  'شکریہ',
   'سبسکرائب',
   'اردو اور انگریزی گفتگو',
   'bilingual urdu and english speech',
-  'سلام علیکم',
-  'السلام علیکم',
-  'یہ کتنے کا ہے؟',
   'اوٹھ با ملوم سلام علیکم',
+  'اوٹھ با ملوم',
+  'subscribe',
+  'thank you for watching',
+  'thanks for watching',
 ]);
 
 /**
@@ -158,10 +158,11 @@ export async function transcribeAudio(
     return { text: '' };
   }
 
-  // Helper to build fresh FormData instance with byte-streamable part for each attempt
+  // Helper to build fresh FormData instance with React Native native URI and fallback byte stream
   const buildFormData = (forcedLanguage?: string): FormData => {
     const formData = new FormData();
     const audioPart = {
+      uri: audioUri,
       name: 'audio.m4a',
       type: 'audio/m4a',
       bytes: () => bytes,

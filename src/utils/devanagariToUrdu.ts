@@ -87,6 +87,8 @@ const COMMON_WORD_MAP: Record<string, string> = {
   'ज़रूरत': 'ضرورت',
   'जरूरत': 'ضرورت',
   'सही': 'صحیح',
+  'चाहिए': 'چاہیے',
+  'लिए': 'لیے',
 };
 
 const CHAR_MAP: Record<string, string> = {
@@ -94,7 +96,17 @@ const CHAR_MAP: Record<string, string> = {
   '।': '۔',
   '॥': '۔',
 
-  // Precomposed Nukta Characters
+  // Precomposed Nukta Characters (NFC single-codepoint)
+  '\u0958': 'ق', // क़
+  '\u0959': 'خ', // ख़
+  '\u095A': 'غ', // ग़
+  '\u095B': 'ز', // ज़
+  '\u095C': 'ڑ', // ड़
+  '\u095D': 'ڑھ', // ढ़
+  '\u095E': 'ف', // फ़
+  '\u095F': 'ی', // य़
+
+  // Decomposed Nukta Characters (Consonant + \u093C)
   'क़': 'ق',
   'ख़': 'خ',
   'ग़': 'غ',
@@ -187,11 +199,14 @@ export function devanagariToUrdu(text: string): string {
     return text;
   }
 
+  // Normalize input to NFD so precomposed NFC nuktas expand to base consonant + \u093C
+  let processed = text.normalize('NFD');
+
   // Step 1: Pre-process common whole-word replacements
-  let processed = text;
   for (const [hindiWord, urduWord] of Object.entries(COMMON_WORD_MAP)) {
-    if (processed.includes(hindiWord)) {
-      processed = processed.split(hindiWord).join(urduWord);
+    const normalizedWord = hindiWord.normalize('NFD');
+    if (processed.includes(normalizedWord)) {
+      processed = processed.split(normalizedWord).join(urduWord);
     }
   }
 
@@ -199,11 +214,20 @@ export function devanagariToUrdu(text: string): string {
     return cleanUrduFormatting(processed);
   }
 
-  // Step 2: Handle consonant + explicit nukta character (\u093C)
-  // Ensures both decomposed (consonant + \u093C) and precomposed nukta variants correctly map to Urdu consonants
-  processed = processed.replace(/([कखगज़जडढफय])\u093C/g, (_, char) => {
-    return NUKTA_MAP[char] ?? char;
-  });
+  // Step 2: Handle consonant + explicit nukta character (\u093C) and direct NFC nukta codepoints
+  // Ensures both decomposed and precomposed nukta variants correctly map to Urdu consonants
+  processed = processed
+    .replace(/\u0958/g, 'ق')
+    .replace(/\u0959/g, 'خ')
+    .replace(/\u095A/g, 'غ')
+    .replace(/\u095B/g, 'ز')
+    .replace(/\u095C/g, 'ڑ')
+    .replace(/\u095D/g, 'ڑھ')
+    .replace(/\u095E/g, 'ف')
+    .replace(/\u095F/g, 'ی')
+    .replace(/([कखगज़जडढफय])\u093C/g, (_, char) => {
+      return NUKTA_MAP[char] ?? char;
+    });
 
   // Step 3: Character-by-character context-aware phonetic mapping
   const result: string[] = [];

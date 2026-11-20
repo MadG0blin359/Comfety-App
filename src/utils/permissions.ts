@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
+import { VisionCamera } from 'react-native-vision-camera';
 import { PermissionCheckResult, PermissionsSnapshot, PermissionState } from '../types';
 
 export async function checkMicrophonePermission(): Promise<PermissionCheckResult> {
@@ -60,8 +61,6 @@ export async function requestMicrophonePermission(): Promise<PermissionCheckResu
 
 export async function checkCameraPermission(): Promise<PermissionCheckResult> {
   try {
-    // Dynamically require to prevent native module crashes in host environments like Expo Go
-    const { VisionCamera } = require('react-native-vision-camera');
     const statusRaw = VisionCamera?.cameraPermissionStatus;
     const granted = statusRaw === 'authorized';
     let status: PermissionState = 'undetermined';
@@ -81,8 +80,8 @@ export async function checkCameraPermission(): Promise<PermissionCheckResult> {
       canAskAgain: statusRaw === 'not-determined',
       status,
     };
-  } catch {
-    // Native VisionCamera not available in current host (e.g. Expo Go)
+  } catch (err: unknown) {
+    console.warn('[Permissions] Failed to check camera permission:', err);
     return {
       granted: false,
       canAskAgain: true,
@@ -93,7 +92,6 @@ export async function checkCameraPermission(): Promise<PermissionCheckResult> {
 
 export async function requestCameraPermission(): Promise<PermissionCheckResult> {
   try {
-    const { VisionCamera } = require('react-native-vision-camera');
     if (!VisionCamera?.requestCameraPermission) {
       return { granted: false, canAskAgain: false, status: 'denied' };
     }
@@ -114,7 +112,8 @@ export async function requestCameraPermission(): Promise<PermissionCheckResult> 
       canAskAgain: statusRaw === 'not-determined',
       status,
     };
-  } catch {
+  } catch (err: unknown) {
+    console.warn('[Permissions] Failed to request camera permission:', err);
     return {
       granted: false,
       canAskAgain: false,

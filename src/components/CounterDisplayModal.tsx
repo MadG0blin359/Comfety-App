@@ -203,16 +203,17 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: "800",
     color: "#FFFFFF",
-    letterSpacing: -0.5,
   },
   englishCounterText: {
     lineHeight: 52,
     textAlign: "left",
+    letterSpacing: -0.5,
   },
   urduCounterText: {
     lineHeight: 68,
     textAlign: "right",
     writingDirection: "rtl",
+    letterSpacing: 0,
   },
   bottomBar: {
     flexDirection: "row",

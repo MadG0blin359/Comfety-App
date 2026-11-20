@@ -36,6 +36,7 @@ import {
 } from '../src/services/geminiVision';
 import { transcribeAudio, isWhisperHallucination } from '../src/services/groqStt';
 import { AUDIO_METERING_CONFIG } from '../src/constants/config';
+import { openAppSettings } from '../src/utils/permissions';
 
 /**
  * Pure bitwise Base64 encoder operating directly on Uint8Array.
@@ -93,6 +94,7 @@ export default function GuideScreen() {
   const lastTapTimeRef = useRef<number>(0);
   const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isCapturingPhotoRef = useRef<boolean>(false);
 
   // Microphone audio recorder for smart 2.5s spoken question listening
   const questionRecorder = useAudioRecorder({
@@ -138,18 +140,28 @@ export default function GuideScreen() {
   });
 
   const capturePhotoForHazard = useCallback(async (): Promise<string | null> => {
-    if (!isCameraActive || !isCameraStarted || isProcessing) {
+    if (
+      !isCameraActive ||
+      !isCameraStarted ||
+      isProcessing ||
+      isCapturingPhotoRef.current
+    ) {
       return null;
     }
+    isCapturingPhotoRef.current = true;
+    let photo: Awaited<ReturnType<typeof photoOutput.capturePhoto>> | null = null;
     try {
-      const photo = await photoOutput.capturePhoto({}, {});
+      photo = await photoOutput.capturePhoto({}, {});
       const arrayBuffer = await photo.getFileDataAsync();
       const bytes = new Uint8Array(arrayBuffer);
       const base64Jpeg = uint8ArrayToBase64(bytes);
-      photo.dispose();
       return base64Jpeg;
-    } catch {
+    } catch (err) {
+      console.warn('[GuideMode] Hazard photo capture warning:', err);
       return null;
+    } finally {
+      photo?.dispose();
+      isCapturingPhotoRef.current = false;
     }
   }, [isCameraActive, isCameraStarted, isProcessing, photoOutput]);
 
@@ -237,9 +249,19 @@ export default function GuideScreen() {
    */
   const captureAndAnalyze = useCallback(
     async (spokenQuestion?: string) => {
+      // If hazard capture is currently in-flight, wait briefly up to 400ms for CameraX availability
+      if (isCapturingPhotoRef.current) {
+        let attempts = 0;
+        while (isCapturingPhotoRef.current && attempts < 8) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          attempts++;
+        }
+      }
+
       if (isProcessing) return;
 
       setIsProcessing(true);
+      isCapturingPhotoRef.current = true;
       setStatusMessage('AI Analyzing...');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       // Blind accessibility: Immediately inform the blind user through audio that AI is analyzing
@@ -249,15 +271,17 @@ export default function GuideScreen() {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      let photo: Awaited<ReturnType<typeof photoOutput.capturePhoto>> | null = null;
       try {
         // Capture photo via Vision Camera v5 Photo Output
-        const photo = await photoOutput.capturePhoto({}, {});
+        photo = await photoOutput.capturePhoto({}, {});
         const arrayBuffer = await photo.getFileDataAsync();
         const bytes = new Uint8Array(arrayBuffer);
         const base64Jpeg = uint8ArrayToBase64(bytes);
 
         // Immediately dispose native image memory to prevent native memory exhaustion
         photo.dispose();
+        photo = null;
 
         setStatusMessage('AI Analyzing...');
 
@@ -289,6 +313,8 @@ export default function GuideScreen() {
         setStatusMessage('Analysis failed');
         speakText(errorMsg);
       } finally {
+        photo?.dispose();
+        isCapturingPhotoRef.current = false;
         setIsProcessing(false);
       }
     },
@@ -346,6 +372,14 @@ export default function GuideScreen() {
     stopSpeech();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    // If user is already in the question listening window and taps again,
+    // cancel listening immediately and fast-path straight to captureAndAnalyze
+    if (isListeningQuestionRef.current) {
+      await cancelQuestionListening();
+      captureAndAnalyze();
+      return;
+    }
+
     if (isProcessing) return;
 
     // Check microphone permission for question asking
@@ -359,7 +393,8 @@ export default function GuideScreen() {
           playsInSilentMode: true,
         });
       }
-    } catch {
+    } catch (permErr) {
+      console.warn('[GuideMode] Mic permission check warning:', permErr);
       canRecord = false;
     }
 
@@ -472,7 +507,7 @@ export default function GuideScreen() {
       setStatusMessage('AI Analyzing...');
       captureAndAnalyze();
     }, 2500);
-  }, [captureAndAnalyze, device, isProcessing, questionRecorder, setTorchManual]);
+  }, [cancelQuestionListening, captureAndAnalyze, device, isProcessing, questionRecorder, setTorchManual]);
 
   /**
    * Master touch dispatcher handling 1x Tap vs 2x Tap resolution across the entire screen.
@@ -621,9 +656,19 @@ export default function GuideScreen() {
             {!hasPermission && (
               <Pressable
                 style={styles.permissionButton}
-                onPress={() => requestPermission()}
+                onPress={async () => {
+                  try {
+                    const granted = await requestPermission();
+                    if (!granted) {
+                      await openAppSettings();
+                    }
+                  } catch (permErr) {
+                    console.warn('[GuideMode] Permission request error, opening settings:', permErr);
+                    await openAppSettings();
+                  }
+                }}
               >
-                <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                <Text style={styles.permissionButtonText}>Grant in Settings</Text>
               </Pressable>
             )}
           </View>
@@ -706,8 +751,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#090D16',
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: THEME.borderRadius.badge,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',

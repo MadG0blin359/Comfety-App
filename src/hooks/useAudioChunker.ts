@@ -40,6 +40,7 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   const speechFramesInChunkRef = useRef<number>(0);
   const isPausedForTtsRef = useRef<boolean>(false);
   const isLoopRunningRef = useRef<boolean>(false);
+  const isCyclingChunkRef = useRef<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const MIN_SPEECH_FRAMES = 4; // At least 4 polls (400ms of active speech > -35dB) required to discard transient clicks/rustles
@@ -81,7 +82,8 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
 
   // Stop current chunk, upload if speech detected, and immediately spin up next chunk
   const cycleAudioChunk = useCallback(async () => {
-    if (!isLoopRunningRef.current) return;
+    if (!isLoopRunningRef.current || isCyclingChunkRef.current) return;
+    isCyclingChunkRef.current = true;
 
     try {
       // 1. Capture completed chunk URI, peak dB, and speech duration frames
@@ -157,6 +159,7 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
       setError(err instanceof Error ? err.message : 'Transcription error');
     } finally {
       setIsTranscribing(false);
+      isCyclingChunkRef.current = false;
     }
   }, [recorder]);
 
@@ -237,6 +240,10 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
   // Pause recording during TTS speech to prevent echo
   const pauseForTts = useCallback(() => {
     isPausedForTtsRef.current = true;
+    if (chunkTimerRef.current) {
+      clearInterval(chunkTimerRef.current);
+      chunkTimerRef.current = null;
+    }
     try {
       if (recorder.isRecording) {
         recorder.pause();
@@ -248,17 +255,38 @@ export function useAudioChunker({ enabled = true }: UseAudioChunkerOptions = {})
 
   // Resume recording 300ms after TTS finishes
   const resumeAfterTts = useCallback(() => {
-    setTimeout(() => {
+    setTimeout(async () => {
       isPausedForTtsRef.current = false;
+      if (!isLoopRunningRef.current) return;
+
       try {
-        if (isLoopRunningRef.current && !recorder.isRecording) {
+        if (!recorder.isRecording) {
+          await recorder.prepareToRecordAsync({
+            ...RecordingPresets.HIGH_QUALITY,
+            isMeteringEnabled: true,
+          });
           recorder.record();
         }
       } catch (err) {
-        console.warn('[AudioChunker] Error resuming after TTS:', err);
+        console.warn('[AudioChunker] Error preparing recorder after TTS, re-preparing:', err);
+        try {
+          await recorder.prepareToRecordAsync({
+            ...RecordingPresets.HIGH_QUALITY,
+            isMeteringEnabled: true,
+          });
+          recorder.record();
+        } catch (innerErr) {
+          console.error('[AudioChunker] Failed to resume recorder after TTS:', innerErr);
+        }
       }
+
+      // Re-arm chunk cycle timer
+      if (chunkTimerRef.current) clearInterval(chunkTimerRef.current);
+      chunkTimerRef.current = setInterval(() => {
+        cycleAudioChunk();
+      }, AUDIO_METERING_CONFIG.chunkDurationMs);
     }, 300);
-  }, [recorder]);
+  }, [cycleAudioChunk, recorder]);
 
   const clearTranscripts = useCallback(() => {
     setTranscripts([]);

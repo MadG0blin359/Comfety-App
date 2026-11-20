@@ -19,6 +19,8 @@ interface VoiceSelectorModalProps {
   selectedVoiceId: string;
   onSelectVoice: (voiceId: string) => void;
   onClose: () => void;
+  onPreviewStart?: () => void;
+  onPreviewEnd?: () => void;
 }
 
 export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
@@ -26,6 +28,8 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
   selectedVoiceId,
   onSelectVoice,
   onClose,
+  onPreviewStart,
+  onPreviewEnd,
 }) => {
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
 
@@ -33,17 +37,29 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     stopSpeech();
     setPlayingVoiceId(null);
+    onPreviewEnd?.();
     onSelectVoice(preset.id);
   };
 
   const handlePreview = (preset: TtsVoicePreset) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPlayingVoiceId(preset.id);
+    onPreviewStart?.();
 
     speakText(preset.samplePhrase, {
       voiceId: preset.id,
-      onDone: () => setPlayingVoiceId(null),
-      onError: () => setPlayingVoiceId(null),
+      onDone: () => {
+        setPlayingVoiceId(null);
+        onPreviewEnd?.();
+      },
+      onStopped: () => {
+        setPlayingVoiceId(null);
+        onPreviewEnd?.();
+      },
+      onError: () => {
+        setPlayingVoiceId(null);
+        onPreviewEnd?.();
+      },
     });
   };
 
@@ -51,6 +67,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSpeech();
     setPlayingVoiceId(null);
+    onPreviewEnd?.();
     onClose();
   };
 

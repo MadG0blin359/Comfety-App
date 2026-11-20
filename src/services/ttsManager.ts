@@ -40,8 +40,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-david",
     name: "David",
     language: "en",
-    pitch: 1.0,
-    rate: 1.0,
+    pitch: 0.88,
+    rate: 0.95,
     gender: "male",
     regionLabel: "English (US Deep)",
     samplePhrase: "Hello, I am ready to assist you.",
@@ -50,8 +50,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-emma",
     name: "Emma",
     language: "en",
-    pitch: 1.0,
-    rate: 1.0,
+    pitch: 1.08,
+    rate: 1.02,
     gender: "female",
     regionLabel: "English (UK Friendly)",
     samplePhrase: "Good day! Lovely to meet you.",
@@ -60,8 +60,8 @@ export const TTS_VOICE_PRESETS: readonly TtsVoicePreset[] = [
     id: "en-oliver",
     name: "Oliver",
     language: "en",
-    pitch: 1.0,
-    rate: 1.0,
+    pitch: 0.92,
+    rate: 0.94,
     gender: "male",
     regionLabel: "English (UK Warm)",
     samplePhrase: "Hello there, hope you are having a pleasant day.",
@@ -72,6 +72,7 @@ export const DEFAULT_VOICE_ID = "ur-fatima";
 
 let cachedVoices: Speech.Voice[] | null = null;
 let activeUtteranceId = 0;
+let activeFinishCallback: (() => void) | null = null;
 
 // Global AppState listener: Instantly halt native speech when minimized, locked, or backgrounded
 AppState.addEventListener("change", (nextState: AppStateStatus) => {
@@ -154,6 +155,7 @@ export interface SpeakOptions {
   voiceId?: string;
   onStart?: () => void;
   onDone?: () => void;
+  onStopped?: () => void;
   onError?: (err: Error) => void;
 }
 
@@ -390,6 +392,15 @@ export async function speakText(
 
   const handleFinish = () => {
     if (utteranceId === activeUtteranceId) {
+      activeFinishCallback = null;
+      options.onDone?.();
+    }
+  };
+
+  activeFinishCallback = () => {
+    if (options.onStopped) {
+      options.onStopped();
+    } else {
       options.onDone?.();
     }
   };
@@ -454,11 +465,14 @@ export async function speakText(
 export async function stopSpeech(): Promise<void> {
   // Invalidate any active utterance chain so background chunk execution halts immediately
   activeUtteranceId++;
+  const finish = activeFinishCallback;
+  activeFinishCallback = null;
   try {
     await Speech.stop();
   } catch (err) {
     console.warn("[TTSManager] Failed to stop speech:", err);
   }
+  finish?.();
 }
 
 /**
@@ -467,7 +481,8 @@ export async function stopSpeech(): Promise<void> {
 export async function isSpeakingAsync(): Promise<boolean> {
   try {
     return await Speech.isSpeakingAsync();
-  } catch {
+  } catch (err: unknown) {
+    console.warn("[TTSManager] isSpeakingAsync query error:", err);
     return false;
   }
 }

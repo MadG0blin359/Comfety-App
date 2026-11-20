@@ -1,4 +1,4 @@
-import { GoogleGenAI, MediaResolution } from '@google/genai';
+import { GoogleGenAI, MediaResolution, type Content } from '@google/genai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ENV_CONFIG, AI_MODELS, STORAGE_KEYS, APP_CONFIG, RATE_LIMITS } from '../constants/config';
 import {
@@ -53,12 +53,7 @@ async function getEnrichedSystemInstruction(): Promise<string> {
   return BASE_VISION_SYSTEM_INSTRUCTION;
 }
 
-interface InternalTurn {
-  role: 'user' | 'model';
-  parts: { text?: string; inlineData?: { mimeType: string; data: string } }[];
-}
-
-let inMemoryTurns: InternalTurn[] = [];
+let inMemoryTurns: Content[] = [];
 const MAX_TURNS = 6; // Keep last 3 exchanges (3 user, 3 model) to conserve context & latency
 
 export function resetVisionConversation(): void {
@@ -100,7 +95,7 @@ export async function describeSceneOrReadText(
     'Describe this scene concisely for a blind person. If there is printed text, medicine labels, signs, or bills, read the most critical information first (names, dates, warnings, amounts).';
 
   // Construct fresh user turn with image and text
-  const currentTurn: InternalTurn = {
+  const currentTurn: Content = {
     role: 'user',
     parts: [
       {
@@ -130,7 +125,7 @@ export async function describeSceneOrReadText(
     try {
       const response = await ai.models.generateContent({
         model: activeModel,
-        contents: contentsToSend as any,
+        contents: contentsToSend,
         config: {
           systemInstruction,
           mediaResolution: MediaResolution.MEDIA_RESOLUTION_HIGH,
@@ -236,7 +231,7 @@ export async function simplifyLastResponse(
   const simplifyPrompt =
     'Explain your previous response in much simpler, everyday words using short sentences. Avoid medical and technical jargon completely so it is crystal clear. Do not use markdown formatting, asterisks, or bullet points; output plain conversational spoken text only.';
 
-  const simplificationTurn: InternalTurn = {
+  const simplificationTurn: Content = {
     role: 'user',
     parts: [{ text: simplifyPrompt }],
   };
@@ -247,7 +242,7 @@ export async function simplifyLastResponse(
   try {
     const response = await ai.models.generateContent({
       model: activeModel,
-      contents: contentsToSend as any,
+      contents: contentsToSend,
       config: {
         systemInstruction,
         abortSignal: options.signal,
@@ -281,7 +276,7 @@ export async function simplifyLastResponse(
       );
       const fallbackResponse = await ai.models.generateContent({
         model: AI_MODELS.VISION_FAST_FALLBACK_MODEL,
-        contents: contentsToSend as any,
+        contents: contentsToSend,
         config: {
           systemInstruction,
           abortSignal: options.signal,
@@ -324,7 +319,7 @@ export async function checkStructuralHazards(
   const prompt =
     'Look at the ground and walking path directly ahead in this image. Is there an immediate physical drop hazard of STAIRS (steps leading down or up) or an OPEN DRAIN / SEWER / HOLE / TRENCH directly in the path of a walking blind person? Return JSON: {"hasHazard": boolean, "hazardType": "stairs" | "drain" | null, "warning": "Concise warning in under 5 words"}. If no ground hazard is directly ahead, return {"hasHazard": false, "hazardType": null, "warning": ""}.';
 
-  const userTurn = {
+  const userTurn: Content = {
     role: 'user',
     parts: [
       {
@@ -342,7 +337,7 @@ export async function checkStructuralHazards(
   try {
     const response = await ai.models.generateContent({
       model: activeModel,
-      contents: [userTurn] as any,
+      contents: [userTurn],
       config: {
         mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
         responseMimeType: 'application/json',
@@ -354,7 +349,8 @@ export async function checkStructuralHazards(
     let parsed: { hasHazard?: boolean; hazardType?: 'stairs' | 'drain' | null; warning?: string };
     try {
       parsed = JSON.parse(text);
-    } catch {
+    } catch (parseErr) {
+      console.warn('[GeminiVision] Failed to parse hazard JSON:', parseErr);
       parsed = { hasHazard: false, hazardType: null, warning: '' };
     }
 

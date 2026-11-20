@@ -7,6 +7,7 @@ import { setAudioModeAsync } from 'expo-audio';
 import * as SplashScreen from 'expo-splash-screen';
 import { THEME } from '../src/constants/theme';
 import { ensureMinimumVolume, setupVolumeForegroundSync } from '../src/services/volumeService';
+import { validateApiKeys } from '../src/constants/config';
 
 // Keep native splash screen visible while app initializes
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -51,7 +52,14 @@ export default function RootLayout() {
     ]).start();
 
     // 2. Audio configuration & intentional brand presence duration
+    let splashHoldTimer: ReturnType<typeof setTimeout> | null = null;
     async function prepare() {
+      try {
+        validateApiKeys();
+      } catch (err: unknown) {
+        console.warn('[RootLayout] API Key validation warning:', err);
+      }
+
       try {
         await setAudioModeAsync({
           playsInSilentMode: true,
@@ -69,7 +77,7 @@ export default function RootLayout() {
       }
 
       // Smooth hold duration: ~2.3 seconds so user comfortably absorbs the brand
-      setTimeout(() => {
+      splashHoldTimer = setTimeout(() => {
         // Synchronously release native OS splash
         SplashScreen.hideAsync().catch(() => {});
 
@@ -99,6 +107,7 @@ export default function RootLayout() {
 
     const cleanupVolumeSync = setupVolumeForegroundSync();
     return () => {
+      if (splashHoldTimer) clearTimeout(splashHoldTimer);
       cleanupVolumeSync();
     };
   }, [logoOpacity, logoScale, splashOpacity, textOpacity, textTranslateY]);
@@ -142,7 +151,7 @@ export default function RootLayout() {
       {isSplashVisible && (
         <Animated.View
           style={[styles.splashContainer, { opacity: splashOpacity }]}
-          pointerEvents="none"
+          pointerEvents="auto"
         >
           <Animated.Image
             source={require('../assets/splash-icon.png')}

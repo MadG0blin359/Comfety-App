@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, Vibration, AppState } from "react-native";
+import { View, Text, StyleSheet, Pressable, Vibration, AppState, AppStateStatus } from "react-native";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ select?: string }>();
   const isNavigatingRef = useRef<boolean>(false);
+  const isInitialLaunchRef = useRef<boolean>(true);
   const [isScreenFocused, setIsScreenFocused] = useState<boolean>(true);
   const [isCheckingAutoOpen, setIsCheckingAutoOpen] = useState<boolean>(
     params.select !== "true",
@@ -80,11 +81,14 @@ export default function HomeScreen() {
       }
 
       try {
-        const preferredMode = (await AsyncStorage.getItem(
-          STORAGE_KEYS.PREFERRED_MODE,
-        )) as AppMode | null;
+        const [preferredMode, autoOpen] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEYS.PREFERRED_MODE),
+          AsyncStorage.getItem(STORAGE_KEYS.AUTO_OPEN),
+        ]);
+
         if (
           isMounted &&
+          autoOpen === "true" &&
           preferredMode &&
           (preferredMode === "conversation" || preferredMode === "guide")
         ) {
@@ -123,6 +127,17 @@ export default function HomeScreen() {
       console.error("[Home] Failed to load permissions:", error);
     }
   }, []);
+
+  // Refresh hardware permissions when user returns from device Settings
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        refreshPermissions();
+      }
+    };
+    const sub = AppState.addEventListener("change", handleAppStateChange);
+    return () => sub.remove();
+  }, [refreshPermissions]);
 
   // Safe navigation that halts active speech and emits tactile feedback
   const navigateToMode = useCallback(
@@ -180,7 +195,13 @@ export default function HomeScreen() {
 
       refreshPermissions();
 
-      // Clear any prior speech and announce instructions with a small buffer for Android TTS readiness
+      // Clear any prior speech and announce instructions
+      // On cold boot, delay 2800ms so welcome speech starts exactly as animated splash finishes
+      // On subsequent navigation back to home, delay 250ms
+      const isInitialLaunch = isInitialLaunchRef.current;
+      isInitialLaunchRef.current = false;
+      const speechDelay = isInitialLaunch && params.select !== "true" ? 2800 : 250;
+
       stopSpeech();
       const speechTimer = setTimeout(() => {
         if (AppState.currentState === "active") {
@@ -188,7 +209,7 @@ export default function HomeScreen() {
             "Welcome to Comfayty. Tap the top half for Conversation Mode. Tap the bottom half, hold anywhere for two seconds, or shake the phone to start Guide Mode.",
           );
         }
-      }, 150);
+      }, speechDelay);
 
       return () => {
         clearTimeout(speechTimer);

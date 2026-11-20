@@ -687,6 +687,8 @@ export default function ConversationScreen() {
         selectedVoiceId={selectedVoiceId}
         onSelectVoice={handleSelectVoice}
         onClose={() => setVoiceModalVisible(false)}
+        onPreviewStart={pauseForTts}
+        onPreviewEnd={resumeAfterTts}
       />
 
       <SavePhraseModal
@@ -713,8 +715,8 @@ const styles = StyleSheet.create({
     gap: THEME.spacing.sm,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: THEME.borderRadius.badge,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
@@ -922,8 +924,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 36,
     borderRadius: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
@@ -1011,8 +1014,8 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   inputActionBtn: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: '#1E293B',
     alignItems: 'center',
@@ -1032,7 +1035,8 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 12,
     paddingHorizontal: 14,
-    height: 46,
+    height: 48,
+    minHeight: 48,
     justifyContent: 'center',
     overflow: 'hidden',
   },
